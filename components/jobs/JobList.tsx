@@ -1071,7 +1071,7 @@ export default function JobList() {
                   <a
                     key={cat.id}
                     href={cat.url}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors whitespace-nowrap"
                   >
                     <Icon size={12} />
                     {cat.label}
@@ -1081,8 +1081,8 @@ export default function JobList() {
             </div>
 
             {/* Role Quick Filters */}
-            <div className={`flex flex-wrap gap-1.5 ${!rolesExpanded ? 'max-h-20 md:max-h-none overflow-hidden' : ''}`}>
-              {visibleRoles.map(role => (
+            <div className="flex flex-wrap gap-1.5 justify-center md:justify-start">
+              {(rolesExpanded ? popularRoles : popularRoles.slice(0, 6)).map(role => (
                 <button
                   key={role}
                   onClick={() => {
@@ -1094,7 +1094,7 @@ export default function JobList() {
                     const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
                     router.replace(newUrl);
                   }}
-                  className="px-2.5 py-1 rounded-full text-xs bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-200 transition-colors"
+                  className="px-2.5 py-1 rounded-full text-xs bg-blue-600 text-white border border-blue-600 hover:bg-blue-700 transition-colors"
                 >
                   {role}
                 </button>

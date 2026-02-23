@@ -77,13 +77,17 @@ export default function TheoryQuizClient({ company }: { company: string }) {
         body: JSON.stringify({ question, userAnswer }),
       });
 
-      if (!response.ok) throw new Error('Grading failed');
-
       const data = await response.json();
+      
+      if (!response.ok || data.error) {
+        console.error('Grading error:', data.error || 'Unknown error');
+        return { score: 0, passed: false, feedback: data.error || 'Unable to grade. Please try again.' };
+      }
+
       return { score: data.score, passed: data.score >= 75, feedback: data.feedback };
     } catch (error) {
       console.error('Grading error:', error);
-      return { score: 0, passed: false, feedback: 'Unable to grade' };
+      return { score: 0, passed: false, feedback: 'Unable to grade. Please check your connection.' };
     }
   };
 
