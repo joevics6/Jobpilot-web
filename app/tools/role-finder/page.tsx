@@ -176,6 +176,31 @@ export default function RoleFinderPage() {
         </div>
       </div>
 
+      {/* How It Works */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">1</div>
+              <p className="text-sm text-gray-600">Select your skills and tools</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">2</div>
+              <p className="text-sm text-gray-600">Add your years of experience</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">3</div>
+              <p className="text-sm text-gray-600">Click Find Roles to get recommendations</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">4</div>
+              <p className="text-sm text-gray-600">Explore matching roles and skill gaps</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="px-6 py-6 max-w-4xl mx-auto">
         {/* Input Section */}
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>

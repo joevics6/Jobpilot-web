@@ -116,6 +116,31 @@ export default function CareerPage() {
           </div>
         </div>
 
+        {/* How It Works */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">1</div>
+                <p className="text-sm text-gray-600">Complete your profile with skills and experience</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">2</div>
+                <p className="text-sm text-gray-600">Our AI analyzes your career profile</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">3</div>
+                <p className="text-sm text-gray-600">Get personalized career path recommendations</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">4</div>
+                <p className="text-sm text-gray-600">Identify skill gaps and get development tips</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* No Analysis - Show Analysis Option */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="max-w-2xl mx-auto text-center">
@@ -199,6 +224,31 @@ export default function CareerPage() {
               <RefreshCw size={16} className={reanalyzing ? 'animate-spin' : ''} />
               {reanalyzing ? 'Reanalyzing...' : 'Reanalyze'}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">1</div>
+              <p className="text-sm text-gray-600">Complete your profile with skills and experience</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">2</div>
+              <p className="text-sm text-gray-600">Our AI analyzes your career profile</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">3</div>
+              <p className="text-sm text-gray-600">Get personalized career path recommendations</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm flex-shrink-0">4</div>
+              <p className="text-sm text-gray-600">Identify skill gaps and get development tips</p>
+            </div>
           </div>
         </div>
       </div>
@@ -471,6 +521,80 @@ export default function CareerPage() {
           </div>
         </div>
       )}
+
+      {/* SEO Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="border-t border-gray-200 pt-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Learn More About Career Coaching</h2>
+          
+          <div className="space-y-8 text-gray-700">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">What is a Career Coach?</h3>
+              <p className="mb-4">
+                A career coach is an AI-powered tool that helps you navigate your career journey by providing personalized guidance based on your skills, experience, and career goals. Our career coaching tool uses advanced AI to analyze your profile and recommend career paths that align with your strengths and market demands.
+              </p>
+              <p>
+                Whether you're just starting out or looking to make a career change, our AI career coach can help you identify opportunities and develop a plan to achieve your professional goals.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Why Career Coaching Matters</h3>
+              <p className="mb-4">
+                In today's competitive job market, having a clear career strategy is more important than ever. Many professionals in Nigeria struggle to identify the right career path or lack the guidance needed to advance their careers. Career coaching provides the structure and insights needed to make informed decisions about your professional future.
+              </p>
+              <p>
+                Our AI-powered career coach analyzes current market trends, identifies skill gaps, and provides actionable recommendations to help you stay competitive in your chosen field.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Key Benefits of Career Coaching</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Personalized career path recommendations based on your unique skills</li>
+                <li>Identification of skill gaps and development opportunities</li>
+                <li>Insights into current market trends and in-demand skills</li>
+                <li>Understanding of potential career opportunities in your field</li>
+                <li>Strategic guidance for career advancement</li>
+                <li>Confidence in making career decisions</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">How to Make the Most of Career Coaching</h3>
+              <p className="mb-4">
+                To get the most out of career coaching, be honest and thorough when providing your profile information. Include all relevant skills, work experience, certifications, and career goals. The more information you provide, the more accurate and helpful the recommendations will be.
+              </p>
+              <p>
+                Regularly revisit your career analysis as your skills and the job market evolve. Our tool allows you to reanalyze your profile whenever you acquire new skills or consider changing career directions.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Get Started Today</h3>
+              <p>
+                Take the first step towards a more fulfilling career. Use our free AI Career Coach tool to get personalized career guidance, identify skill gaps, and discover new career opportunities that match your potential.
+              </p>
+            </div>
+          </div>
+
+          {/* JSON-LD Schema */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                "name": "Career Coach",
+                "description": "Free AI-powered career coaching tool. Get personalized career paths, skill gap analysis, and career development recommendations.",
+                "url": "https://jobmeter.com/tools/career",
+                "applicationCategory": "Career",
+                "offers": { "@type": "Offer", "price": "0", "priceCurrency": "NGN" }
+              })
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

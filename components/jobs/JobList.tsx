@@ -59,6 +59,8 @@ export default function JobList() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [rolesExpanded, setRolesExpanded] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     search: '',
     location: [] as string[],
@@ -66,7 +68,9 @@ export default function JobList() {
     employmentType: [] as string[],
     salaryRange: undefined as { min: number; max: number } | undefined,
     remote: false,
+    country: '',
   });
+  const [detectedCountry, setDetectedCountry] = useState<string | null>(null);
 
   const categories = [
     { id: 'remote', label: 'Remote', icon: Laptop, url: '/tools/remote-jobs-finder' },
@@ -81,7 +85,7 @@ export default function JobList() {
   const popularRoles = [
     'Accountant', 'Digital Marketer', 'Social Media Manager', 'Data Analyst', 'Developer',
     'Software Engineer', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer',
-    'Mobile App Developer', 'Data Scientist', 'DevOps Engineer', 'Cybersecurity Analyst',
+    'Mobile App Developer', 'DevOps Engineer', 'Data Scientist', 'Cybersecurity Analyst',
     'IT Support Specialist', 'Product Manager', 'Project Manager', 'Business Analyst',
     'UI/UX Designer', 'Graphic Designer', 'Content Writer', 'SEO Specialist', 'Sales Executive',
     'Marketing Executive', 'Customer Service Representative', 'Administrative Officer',
@@ -90,11 +94,48 @@ export default function JobList() {
     'Retail Sales Associate', 'Banking Officer', 'Credit Analyst', 'Risk Analyst',
     'Healthcare Assistant', 'Registered Nurse', 'Pharmacist', 'Medical Laboratory Scientist',
     'Civil Engineer', 'Mechanical Engineer', 'Electrical Engineer', 'Architect',
-    'Quality Assurance Officer', 'Teacher', 'Lecturer', 'Research Assistant', 'Graduate Trainee', 'Intern'
+    'Quality Assurance Officer', 'Teacher', 'Lecturer', 'Research Assistant', 'Graduate Trainee', 'Intern',
+    'Chief Executive Officer', 'Chief Financial Officer', 'Chief Technology Officer', 'Chief Operating Officer',
+    'VP of Marketing', 'VP of Sales', 'VP of Engineering', 'Director of Operations', 'Director of HR',
+    'Regional Manager', 'Area Manager', 'Branch Manager', 'General Manager', 'Managing Director',
+    'Legal Counsel', 'Corporate Lawyer', 'Compliance Officer', 'Risk Manager', 'Security Analyst',
+    'Network Administrator', 'Systems Administrator', 'Database Administrator', 'Cloud Engineer',
+    'Machine Learning Engineer', 'AI Engineer', 'Blockchain Developer', 'Game Developer', 'QA Engineer',
+    'Technical Writer', 'Copywriter', 'Journalist', 'Editor', 'Proofreader', 'Translator', 'Interpreter',
+    'Public Relations Manager', 'Communications Manager', 'Brand Manager', 'Marketing Manager',
+    'Digital Strategist', 'Growth Hacker', 'Marketing Analyst', 'Business Development Manager',
+    'Account Manager', 'Key Account Manager', 'Territory Sales Manager', 'Sales Director',
+    'Procurement Manager', 'Inventory Manager', 'Warehouse Manager', 'Production Manager',
+    'Quality Control Manager', 'Safety Manager', 'Environmental Engineer', 'Surveyor', 'Urban Planner',
+    'Interior Designer', 'Landscape Architect', 'Construction Manager', 'Site Engineer',
+    'Civil Technician', 'Draftsman', 'CAD Technician', 'BIM Manager', 'Estimator', 'Quantity Surveyor',
+    'Hotel Manager', 'Restaurant Manager', 'Chef', 'Pastry Chef', 'Bartender', 'Catering Manager',
+    'Event Planner', 'Travel Agent', 'Tour Guide', 'Flight Attendant', 'Pilot', 'Air Traffic Controller',
+    'Logistics Manager', 'Freight Forwarder', 'Customs Broker', 'Shipping Coordinator', 'Driver',
+    'Electrician', 'Plumber', 'Carpenter', 'Mason', 'Painter', 'Welder', 'Mechanic', 'Technician',
+    'Lab Technician', 'Pharmacy Technician', 'Radiographer', 'Physiotherapist', 'Dietitian',
+    'Psychologist', 'Counselor', 'Social Worker', 'Community Manager', 'Youth Worker',
+    'Fashion Designer', 'Textile Designer', 'Jeweler', 'Photographer', 'Videographer', 'Animator',
+    'Music Producer', 'Sound Engineer', 'Film Director', 'Screenwriter', 'Actor', 'Model',
+    'Fitness Trainer', 'Yoga Instructor', 'Sports Coach', 'Personal Trainer', 'Nutritionist',
+    'Real Estate Agent', 'Property Manager', 'Estate Agent', 'Landlord', 'Facility Manager',
+    'Insurance Agent', 'Underwriter', 'Actuary', 'Claims Adjuster', 'Broker', 'Financial Planner',
+    'Investment Analyst', 'Portfolio Manager', 'Treasurer', 'Controller', 'Payroll Administrator',
+    'Bookkeeper', 'Tax Specialist', 'Revenue Manager', 'Billing Specialist', 'Accounts Payable',
+    'Accounts Receivable', 'Staff Nurse', 'Enrolled Nurse', 'Midwife', 'Paramedic', 'Emergency Medical Technician',
+    'Dental Hygienist', 'Dentist', 'Dental Assistant', 'Optometrist', 'Veterinarian', 'Pet Groomer'
   ];
 
   // Show all roles but control visibility with CSS for hydration safety
   const visibleRoles = rolesExpanded ? popularRoles : popularRoles;
+
+  const getSuggestions = (query: string) => {
+    if (!query || query.length < 1) return [];
+    const lowerQuery = query.toLowerCase();
+    return popularRoles.filter(role => 
+      role.toLowerCase().includes(lowerQuery)
+    ).slice(0, 8);
+  };
 
   const checkAuth = async () => {
     try {
@@ -136,6 +177,50 @@ export default function JobList() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Geo-detection: auto-detect country on first visit only
+  useEffect(() => {
+    const detectCountry = async () => {
+      const hasVisitedBefore = localStorage.getItem('has_visited_jobs');
+      const userChangedCountry = localStorage.getItem('user_changed_country');
+      
+      // Only auto-detect if user hasn't manually selected a country
+      if (userChangedCountry === 'true') {
+        const savedCountry = localStorage.getItem('user_country');
+        if (savedCountry) {
+          setDetectedCountry(savedCountry);
+          setFilters(prev => ({ ...prev, country: savedCountry }));
+        }
+        return;
+      }
+      
+      if (!hasVisitedBefore) {
+        // First visit - auto-detect and apply
+        try {
+          const response = await fetch('https://ipapi.co/json/');
+          const data = await response.json();
+          const country = data.country_name || 'Nigeria';
+          setDetectedCountry(country);
+          setFilters(prev => ({ ...prev, country }));
+          localStorage.setItem('user_country', country);
+          localStorage.setItem('has_visited_jobs', 'true');
+        } catch (error) {
+          console.error('Error detecting country:', error);
+          localStorage.setItem('user_country', 'Nigeria');
+          localStorage.setItem('has_visited_jobs', 'true');
+        }
+      } else {
+        // Returning visit - load saved country
+        const savedCountry = localStorage.getItem('user_country');
+        if (savedCountry) {
+          setDetectedCountry(savedCountry);
+          setFilters(prev => ({ ...prev, country: savedCountry }));
+        }
+      }
+    };
+    
+    detectCountry();
+  }, []);
+
   // Track desktop/mobile
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
@@ -154,6 +239,7 @@ export default function JobList() {
     const salaryMaxParam = searchParams.get('salaryMax');
     const remoteParam = searchParams.get('remote');
     const sortParam = searchParams.get('sort');
+    const countryParam = searchParams.get('country');
 
     if (searchParam) {
       setSearchQuery(searchParam);
@@ -162,6 +248,12 @@ export default function JobList() {
 
     if (locationParam) {
       setFilters(prev => ({ ...prev, location: locationParam.split(',') }));
+    }
+
+    if (countryParam) {
+      setFilters(prev => ({ ...prev, country: countryParam }));
+      localStorage.setItem('user_country', countryParam);
+      localStorage.setItem('user_changed_country', 'true');
     }
 
     if (sectorParam) {
@@ -717,7 +809,6 @@ export default function JobList() {
       // Skip applied jobs
       if (appliedJobs.includes(job.id)) return false;
       
-      const jobLocationLower = job.location.toLowerCase();
       const jobTypeLower = job.type?.toLowerCase() || '';
       
       // Search filter
@@ -729,24 +820,84 @@ export default function JobList() {
         if (!titleMatch && !companyMatch && !descriptionMatch) return false;
       }
       
-      // Location filter
+      // Location filter (for Nigerian states)
       if (filters.location && filters.location.length > 0) {
-        const locationMatch = filters.location.some((loc: string) => 
-          jobLocationLower.includes(loc.toLowerCase())
-        );
+        const jobLoc = job.location;
+        let locationMatch = false;
+        
+        if (typeof jobLoc === 'string') {
+          locationMatch = filters.location.some((loc: string) => 
+            jobLoc.toLowerCase().includes(loc.toLowerCase())
+          );
+        } else if (jobLoc && typeof jobLoc === 'object') {
+          const loc = jobLoc as Record<string, unknown>;
+          locationMatch = filters.location.some((locName: string) => {
+            const state = String(loc.state || '').toLowerCase();
+            const city = String(loc.city || '').toLowerCase();
+            return state.includes(locName.toLowerCase()) || city.includes(locName.toLowerCase());
+          });
+        }
+        
         if (!locationMatch) return false;
       }
       
+      // Country filter with aliases for common abbreviations
+      if (filters.country) {
+        const jobLoc = job.location;
+        let countryMatch = false;
+        let isRemote = false;
+        
+        // Map filter country to possible variations in database
+        const countryAliases: Record<string, string[]> = {
+          'United States': ['united states', 'usa', 'us', 'america', 'united states of america'],
+          'United Kingdom': ['united kingdom', 'uk', 'u.k.', 'britain', 'great britain'],
+          'United Arab Emirates': ['united arab emirates', 'uae', 'dubai', 'emirates'],
+          'South Korea': ['south korea', 'korea', 'republic of korea'],
+          'New Zealand': ['new zealand', 'nz'],
+          'South Africa': ['south africa', 'sa', 'rsa'],
+        };
+        
+        const filterCountryLower = filters.country.toLowerCase();
+        const aliases = countryAliases[filters.country] || [filterCountryLower];
+        
+        if (typeof jobLoc === 'string') {
+          const jobLocLower = jobLoc.toLowerCase();
+          countryMatch = aliases.some(alias => jobLocLower.includes(alias));
+          isRemote = jobLocLower.includes('remote');
+        } else if (jobLoc && typeof jobLoc === 'object') {
+          const loc = jobLoc as Record<string, unknown>;
+          const jobCountry = String(loc.country || '').toLowerCase();
+          countryMatch = aliases.some(alias => jobCountry.includes(alias));
+          isRemote = Boolean(loc.remote);
+        }
+        
+        if (!countryMatch && !isRemote) return false;
+      }
+      
       // Remote filter
-      if (filters.remote && !jobLocationLower.includes('remote')) {
-        return false;
+      if (filters.remote) {
+        const jobLoc = job.location;
+        let isRemote = false;
+        
+        if (typeof jobLoc === 'string') {
+          isRemote = jobLoc.toLowerCase().includes('remote');
+        } else if (jobLoc && typeof jobLoc === 'object') {
+          isRemote = Boolean((jobLoc as Record<string, unknown>).remote);
+        }
+        if (!isRemote) return false;
       }
       
       // Employment type filter
       if (filters.employmentType && filters.employmentType.length > 0) {
+        const jobLoc = job.location;
         const typeMatch = filters.employmentType.some((type: string) => {
           if (type.toLowerCase() === 'remote') {
-            return jobLocationLower.includes('remote');
+            if (typeof jobLoc === 'string') {
+              return jobLoc.toLowerCase().includes('remote');
+            } else if (jobLoc && typeof jobLoc === 'object') {
+              return Boolean((jobLoc as Record<string, unknown>).remote);
+            }
+            return false;
           }
           return jobTypeLower.includes(type.toLowerCase()) || type.toLowerCase().includes(jobTypeLower);
         });
@@ -842,7 +993,8 @@ export default function JobList() {
       (filters.employmentType && filters.employmentType.length > 0) ||
       filters.salaryRange ||
       filters.remote ||
-      filters.search
+      filters.search ||
+      filters.country
     );
   };
 
@@ -865,9 +1017,11 @@ export default function JobList() {
       employmentType: [] as string[],
       salaryRange: undefined,
       remote: false,
+      country: '',
     };
     setFilters(clearedFilters);
     setSearchQuery('');
+    localStorage.setItem('user_changed_country', 'false');
     
     // Clear URL parameters
     const params = new URLSearchParams();
@@ -953,6 +1107,8 @@ export default function JobList() {
                   const newSearch = e.target.value;
                   setFilters(prev => ({ ...prev, search: newSearch }));
                   setSearchQuery(newSearch);
+                  setFilteredSuggestions(getSuggestions(newSearch));
+                  setShowSuggestions(newSearch.length > 0);
                   
                   const params = new URLSearchParams(searchParams.toString());
                   if (newSearch) {
@@ -964,13 +1120,38 @@ export default function JobList() {
                   const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
                   router.replace(newUrl);
                 }}
-                className="relative w-full pl-14 pr-14 py-5 rounded-xl border-2 outline-none focus:ring-0 focus:border-blue-500 transition-all text-base font-medium shadow-lg hover:shadow-xl z-10"
+                onFocus={() => setShowSuggestions(filters.search.length > 0)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                className="relative w-full pl-14 pr-14 py-5 rounded-xl border-2 outline-none focus:ring-0 focus:border-blue-500 transition-all text-base font-medium shadow-lg hover:shadow-xl z-10 placeholder:text-gray-400"
                 style={{
                   backgroundColor: theme.colors.background.DEFAULT,
                   borderColor: theme.colors.primary.DEFAULT,
                   color: theme.colors.text.primary,
                 }}
               />
+              {/* Autocomplete Suggestions */}
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-t-0 rounded-b-xl shadow-lg z-50 max-h-64 overflow-y-auto">
+                  {filteredSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setFilters(prev => ({ ...prev, search: suggestion }));
+                        setSearchQuery(suggestion);
+                        setShowSuggestions(false);
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set('search', suggestion);
+                        const newUrl = `${pathname}?${params.toString()}`;
+                        router.replace(newUrl);
+                      }}
+                      className="w-full px-5 py-3 text-left hover:bg-blue-50 transition-colors text-sm"
+                      style={{ color: theme.colors.text.primary }}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
               {filters.search && (
                 <button
                   onClick={() => {
@@ -1011,6 +1192,133 @@ export default function JobList() {
                 )}
               </button>
 
+              {/* Country Quick Filter */}
+              <div className="flex-1 sm:flex-none relative">
+                <select
+                  value={filters.country || (localStorage.getItem('user_changed_country') === 'true' ? filters.country : (detectedCountry || ''))}
+                  onChange={(e) => {
+                    const newCountry = e.target.value;
+                    if (newCountry === 'Global') {
+                      setFilters(prev => ({ ...prev, country: '', location: [] }));
+                      localStorage.setItem('user_country', 'Global');
+                      localStorage.setItem('user_changed_country', 'true');
+                    } else if (newCountry) {
+                      setFilters(prev => ({ ...prev, country: newCountry, location: newCountry === 'Nigeria' ? prev.location : [] }));
+                      localStorage.setItem('user_country', newCountry);
+                      localStorage.setItem('user_changed_country', 'true');
+                    }
+                    const params = new URLSearchParams(searchParams.toString());
+                    if (newCountry && newCountry !== 'Global') {
+                      params.set('country', newCountry);
+                    } else {
+                      params.delete('country');
+                    }
+                    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+                    router.replace(newUrl);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer"
+                  style={{
+                    backgroundColor: filters.country ? theme.colors.primary.DEFAULT + '10' : theme.colors.background.DEFAULT,
+                    borderColor: filters.country ? theme.colors.primary.DEFAULT : theme.colors.border.DEFAULT,
+                  }}
+                >
+                  <option value="Global">Global</option>
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="United States">United States</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Canada">Canada</option>
+                  <option value="Australia">Australia</option>
+                  <option value="Germany">Germany</option>
+                  <option value="France">France</option>
+                  <option value="India">India</option>
+                  <option value="Kenya">Kenya</option>
+                  <option value="South Africa">South Africa</option>
+                  <option value="Ghana">Ghana</option>
+                  <option value="United Arab Emirates">United Arab Emirates</option>
+                  <option value="Saudi Arabia">Saudi Arabia</option>
+                  <option value="Singapore">Singapore</option>
+                  <option value="Netherlands">Netherlands</option>
+                  <option value="Spain">Spain</option>
+                  <option value="Italy">Italy</option>
+                  <option value="Brazil">Brazil</option>
+                  <option value="Mexico">Mexico</option>
+                  <option value="Japan">Japan</option>
+                  <option value="China">China</option>
+                  <option value="Ireland">Ireland</option>
+                  <option value="Switzerland">Switzerland</option>
+                  <option value="Sweden">Sweden</option>
+                  <option value="Norway">Norway</option>
+                  <option value="Denmark">Denmark</option>
+                  <option value="Finland">Finland</option>
+                  <option value="Poland">Poland</option>
+                  <option value="Portugal">Portugal</option>
+                  <option value="Belgium">Belgium</option>
+                  <option value="Austria">Austria</option>
+                  <option value="New Zealand">New Zealand</option>
+                  <option value="Israel">Israel</option>
+                  <option value="Malaysia">Malaysia</option>
+                  <option value="Philippines">Philippines</option>
+                  <option value="Indonesia">Indonesia</option>
+                  <option value="Thailand">Thailand</option>
+                  <option value="Vietnam">Vietnam</option>
+                  <option value="South Korea">South Korea</option>
+                  <option value="Egypt">Egypt</option>
+                  <option value="Argentina">Argentina</option>
+                  <option value="Austria">Austria</option>
+                  <option value="Bangladesh">Bangladesh</option>
+                  <option value="Belgium">Belgium</option>
+                  <option value="Colombia">Colombia</option>
+                  <option value="Czech Republic">Czech Republic</option>
+                  <option value="Chile">Chile</option>
+                  <option value="Denmark">Denmark</option>
+                  <option value="Ecuador">Ecuador</option>
+                  <option value="Ethiopia">Ethiopia</option>
+                  <option value="Finland">Finland</option>
+                  <option value="Greece">Greece</option>
+                  <option value="Hong Kong">Hong Kong</option>
+                  <option value="Hungary">Hungary</option>
+                  <option value="Iraq">Iraq</option>
+                  <option value="Italy">Italy</option>
+                  <option value="Jordan">Jordan</option>
+                  <option value="Kenya">Kenya</option>
+                  <option value="Kuwait">Kuwait</option>
+                  <option value="Lebanon">Lebanon</option>
+                  <option value="Malaysia">Malaysia</option>
+                  <option value="Mexico">Mexico</option>
+                  <option value="Morocco">Morocco</option>
+                  <option value="Netherlands">Netherlands</option>
+                  <option value="New Zealand">New Zealand</option>
+                  <option value="Norway">Norway</option>
+                  <option value="Oman">Oman</option>
+                  <option value="Pakistan">Pakistan</option>
+                  <option value="Peru">Peru</option>
+                  <option value="Philippines">Philippines</option>
+                  <option value="Poland">Poland</option>
+                  <option value="Portugal">Portugal</option>
+                  <option value="Qatar">Qatar</option>
+                  <option value="Romania">Romania</option>
+                  <option value="Russia">Russia</option>
+                  <option value="Saudi Arabia">Saudi Arabia</option>
+                  <option value="Singapore">Singapore</option>
+                  <option value="South Africa">South Africa</option>
+                  <option value="Spain">Spain</option>
+                  <option value="Sri Lanka">Sri Lanka</option>
+                  <option value="Sweden">Sweden</option>
+                  <option value="Switzerland">Switzerland</option>
+                  <option value="Taiwan">Taiwan</option>
+                  <option value="Tanzania">Tanzania</option>
+                  <option value="Thailand">Thailand</option>
+                  <option value="Turkey">Turkey</option>
+                  <option value="Ukraine">Ukraine</option>
+                  <option value="United Arab Emirates">United Arab Emirates</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="United States">United States</option>
+                  <option value="Venezuela">Venezuela</option>
+                  <option value="Vietnam">Vietnam</option>
+                  <option value="Zimbabwe">Zimbabwe</option>
+                </select>
+              </div>
+
               {/* Sort Button - Styled like Filter */}
               <div className="flex-1 sm:flex-none relative">
                 <button
@@ -1036,6 +1344,14 @@ export default function JobList() {
                 </button>
               </div>
             </div>
+
+            {/* Loading Indicator - Visible without scrolling */}
+            {latestJobsLoading && latestJobs.length === 0 && (
+              <div className="flex items-center justify-center gap-2 py-2">
+                <div className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                <span className="text-sm" style={{ color: theme.colors.text.secondary }}>Finding the latest jobs for you...</span>
+              </div>
+            )}
 
             {/* Category Filters - Horizontal scroll on mobile, centered on desktop */}
             <div className="flex gap-2 overflow-x-auto pb-2 md:flex-wrap md:overflow-visible md:justify-center scrollbar-hide">
@@ -1119,6 +1435,12 @@ export default function JobList() {
         <JobFilters
           filters={filters}
           onFiltersChange={(newFilters: any) => {
+            // Track user manual country change
+            if (newFilters.country && newFilters.country !== filters.country) {
+              localStorage.setItem('user_country', newFilters.country);
+              localStorage.setItem('user_changed_country', 'true');
+            }
+            
             setFilters(newFilters);
             
             const params = new URLSearchParams();
@@ -1129,6 +1451,10 @@ export default function JobList() {
             
             if (newFilters.sector) {
               params.set('sector', newFilters.sector);
+            }
+            
+            if (newFilters.country) {
+              params.set('country', newFilters.country);
             }
             
             if (newFilters.role) {
@@ -1221,12 +1547,7 @@ export default function JobList() {
           {/* Latest Jobs Tab */}
           {activeTab === 'latest' && (
             <>
-              {latestJobsLoading && latestJobs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <div className="w-12 h-12 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-                  <p style={{ color: theme.colors.text.secondary }}>Finding the latest jobs for you...</p>
-                </div>
-              ) : sortedJobs.length === 0 ? (
+              {sortedJobs.length === 0 && !latestJobsLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center max-w-md mx-auto">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                     <Search size={24} style={{ color: theme.colors.text.muted }} />

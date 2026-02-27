@@ -112,16 +112,20 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
         <div className="px-4 py-3" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
-          <div className="max-w-lg mx-auto">
+          <div className="max-w-4xl mx-auto">
             <Link href={`/tools/quiz/${company.toLowerCase().replace(/\s+/g, '-')}`} className="flex items-center gap-2 text-white/80 hover:text-white text-sm">
               <ArrowLeft size={18} />
               Back
             </Link>
           </div>
         </div>
-        <div className="max-w-sm mx-auto px-4 py-8 text-center">
-          <p className="text-gray-600 mb-2">No questions found</p>
-          <p className="text-xs text-gray-400">{debug}</p>
+        <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+          <div className="bg-white rounded-xl p-8 shadow-sm" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
+            <p className="text-gray-600 mb-2">No questions available for this company yet.</p>
+            <p className="text-sm text-gray-500 mt-4">
+              Questions require internet connection to load. Please check your connection and try again.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -133,7 +137,7 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
         <div className="px-4 py-3" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
-          <div className="max-w-lg mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
             <Link href={`/tools/quiz/${company.toLowerCase().replace(/\s+/g, '-')}`} className="flex items-center gap-2 text-white/80 hover:text-white text-sm">
               <ArrowLeft size={18} />
               Exit
@@ -142,7 +146,7 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
           </div>
         </div>
 
-        <div className="max-w-lg mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="bg-white rounded-xl p-6 text-center mb-4" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: percentage >= 70 ? '#10B98120' : '#EF444420' }}>
               <span className="text-2xl font-bold" style={{ color: percentage >= 70 ? theme.colors.success : theme.colors.error }}>
@@ -211,7 +215,7 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
       <div className="px-4 py-3 sticky top-0 z-10" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
-        <div className="max-w-lg mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href={`/tools/quiz/${company.toLowerCase().replace(/\s+/g, '-')}`} className="flex items-center gap-2 text-white/80 hover:text-white text-sm">
             <ArrowLeft size={18} />
             Exit
@@ -220,7 +224,7 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="max-w-4xl mx-auto px-4 py-4">
         <div className="mb-3">
           <div className="h-1.5 bg-gray-200 rounded-full">
             <div className="h-full rounded-full" style={{ width: `${(answeredCount / questions.length) * 100}%`, backgroundColor: theme.colors.primary.DEFAULT }} />

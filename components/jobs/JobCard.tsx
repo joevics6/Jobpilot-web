@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
-import { MapPin, Bookmark, BookmarkCheck, FileCheck, Trash2, Calendar, ExternalLink, Briefcase } from 'lucide-react';
+import { MapPin, Bookmark, BookmarkCheck, FileCheck, Trash2, Calendar, ExternalLink, Briefcase, Building2 } from 'lucide-react';
 import { theme } from '@/lib/theme';
 
 export interface JobUI {
@@ -10,6 +10,7 @@ export interface JobUI {
   slug: string;
   title: string;
   company: string;
+  companyLogo?: string;
   location: string;
   salary: string;
   match: number;
@@ -17,6 +18,7 @@ export interface JobUI {
   calculatedTotal?: number;
   breakdown?: any;
   postedDate?: string;
+  posted_date?: string;
   sector?: string;
 
   /** Used for search & filtering */
@@ -55,6 +57,9 @@ export default function JobCard({
   const isSaved = useMemo(() => savedJobs.includes(job.id), [savedJobs, job.id]);
   const isApplied = useMemo(() => appliedJobs.includes(job.id), [appliedJobs, job.id]);
 
+  // Check if job was posted today - use same logic as postedDate display
+  const isNewJob = job.postedDate === 'Today';
+
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -75,7 +80,7 @@ export default function JobCard({
 
   return (
     <div
-      className="bg-white rounded-2xl p-5 mb-5 shadow-sm hover:shadow-lg transition-all duration-300 border relative overflow-hidden group"
+      className="bg-white rounded-2xl p-5 mb-5 shadow-md hover:shadow-xl transition-all duration-300 border-2 relative overflow-hidden group"
       style={{
         borderColor: theme.colors.border.DEFAULT,
         backgroundColor: theme.colors.card.DEFAULT,
@@ -91,7 +96,12 @@ export default function JobCard({
 
       <div className="flex flex-col gap-4">
         {/* Header Section */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          {/* Company Logo */}
+          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Building2 size={20} className="text-gray-400" />
+          </div>
+          
           {/* Job Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3">
@@ -209,6 +219,12 @@ export default function JobCard({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* New Badge - shown before Apply button */}
+            {isNewJob && (
+              <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1.5 rounded">
+                New
+              </span>
+            )}
             {/* Save Button */}
             <button
               onClick={handleSave}

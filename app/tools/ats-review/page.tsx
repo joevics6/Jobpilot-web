@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, FileCheck, Clock, TrendingUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, FileCheck, Clock, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
@@ -13,7 +13,6 @@ export default function ATSReviewPage() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<any[]>([]);
-  const [seoExpanded, setSeoExpanded] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -87,6 +86,31 @@ export default function ATSReviewPage() {
             >
               <Plus size={20} />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">1</div>
+              <p className="text-sm text-gray-600">Upload your CV or paste its content</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">2</div>
+              <p className="text-sm text-gray-600">Select a target job description (optional)</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">3</div>
+              <p className="text-sm text-gray-600">Our AI analyzes your CV for ATS compatibility</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">4</div>
+              <p className="text-sm text-gray-600">Receive a detailed score and improvement tips</p>
+            </div>
           </div>
         </div>
       </div>
@@ -179,94 +203,83 @@ export default function ATSReviewPage() {
         onClose={handleModalClose}
       />
 
-      {/* SEO Content - Hidden by accordion */}
+      {/* SEO Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="border-t border-gray-200 pt-8">
-          <button
-            onClick={() => setSeoExpanded(!seoExpanded)}
-            className="flex items-center justify-between w-full text-left"
-          >
-            <h2 className="text-lg font-semibold text-gray-900">Learn More About ATS CV Review</h2>
-            <ChevronDown
-              size={20}
-              className={`text-gray-500 transition-transform ${seoExpanded ? 'rotate-180' : ''}`}
-            />
-          </button>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Learn More About ATS CV Review</h2>
           
-          {seoExpanded && (
-            <div className="mt-6 space-y-6 text-gray-700">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">What is ATS?</h3>
-                <p className="mb-4">
-                  ATS (Applicant Tracking System) is software used by employers to manage their recruitment process. Most companies in Nigeria and globally use ATS to filter through hundreds or thousands of applications, making it crucial to optimize your CV for these systems.
-                </p>
-                <p>
-                  Our ATS CV Review tool analyzes your resume against common ATS algorithms and provides actionable feedback to improve your chances of getting past the initial screening.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">How Our ATS Review Works</h3>
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Upload your CV or paste the content</li>
-                  <li>Select a target job (optional but recommended)</li>
-                  <li>Our AI analyzes your CV for ATS compatibility</li>
-                  <li>Receive a detailed score and improvement suggestions</li>
-                  <li>Implement the feedback to improve your CV</li>
-                </ol>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Key ATS Factors We Check</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Keyword optimization for the job description</li>
-                  <li>Skills matching with job requirements</li>
-                  <li>Work experience relevance</li>
-                  <li>Education qualifications alignment</li>
-                  <li>CV formatting compatibility</li>
-                  <li>Industry-specific terminology</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Tips to Pass ATS</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Use standard section headings (Experience, Education, Skills)</li>
-                  <li>Include keywords from the job description</li>
-                  <li>Avoid tables, graphics, and images</li>
-                  <li>Use standard file formats (PDF or Word)</li>
-                  <li>Don't stuff keywords - use them naturally</li>
-                  <li>Match your job titles to the job posting</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Common ATS Mistakes to Avoid</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Using headers and footers (ATS can't read them)</li>
-                  <li>Including special characters or icons</li>
-                  <li>Using multiple columns (most ATS can't read them)</li>
-                  <li>Submitting in the wrong file format</li>
-                  <li>Using acronyms that aren't commonly known</li>
-                  <li>Leaving out important keywords</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Why ATS Matters in Nigeria</h3>
-                <p className="mb-4">
-                  With the increasing number of job applications in Nigeria, most employers now rely on ATS to handle the volume. Understanding how ATS works can significantly improve your chances of landing interviews, especially with multinational companies and top Nigerian employers.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Get Started</h3>
-                <p>
-                  Use our free ATS CV Review tool today to ensure your resume passes the ATS screening and gets noticed by recruiters. Upload your CV now and start optimizing for success.
-                </p>
-              </div>
+          <div className="space-y-8 text-gray-700">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">What is ATS?</h3>
+              <p className="mb-4">
+                ATS (Applicant Tracking System) is software used by employers to manage their recruitment process. Most companies in Nigeria and globally use ATS to filter through hundreds or thousands of applications, making it crucial to optimize your CV for these systems.
+              </p>
+              <p>
+                Our ATS CV Review tool analyzes your resume against common ATS algorithms and provides actionable feedback to improve your chances of getting past the initial screening.
+              </p>
             </div>
-          )}
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">How Our ATS Review Works</h3>
+              <ol className="list-decimal list-inside space-y-2">
+                <li>Upload your CV or paste the content</li>
+                <li>Select a target job (optional but recommended)</li>
+                <li>Our AI analyzes your CV for ATS compatibility</li>
+                <li>Receive a detailed score and improvement suggestions</li>
+                <li>Implement the feedback to improve your CV</li>
+              </ol>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Key ATS Factors We Check</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Keyword optimization for the job description</li>
+                <li>Skills matching with job requirements</li>
+                <li>Work experience relevance</li>
+                <li>Education qualifications alignment</li>
+                <li>CV formatting compatibility</li>
+                <li>Industry-specific terminology</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Tips to Pass ATS</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Use standard section headings (Experience, Education, Skills)</li>
+                <li>Include keywords from the job description</li>
+                <li>Avoid tables, graphics, and images</li>
+                <li>Use standard file formats (PDF or Word)</li>
+                <li>Don't stuff keywords - use them naturally</li>
+                <li>Match your job titles to the job posting</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Common ATS Mistakes to Avoid</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Using headers and footers (ATS can't read them)</li>
+                <li>Including special characters or icons</li>
+                <li>Using multiple columns (most ATS can't read them)</li>
+                <li>Submitting in the wrong file format</li>
+                <li>Using acronyms that aren't commonly known</li>
+                <li>Leaving out important keywords</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Why ATS Matters in Nigeria</h3>
+              <p className="mb-4">
+                With the increasing number of job applications in Nigeria, most employers now rely on ATS to handle the volume. Understanding how ATS works can significantly improve your chances of landing interviews, especially with multinational companies and top Nigerian employers.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Get Started</h3>
+              <p>
+                Use our free ATS CV Review tool today to ensure your resume passes the ATS screening and gets noticed by recruiters. Upload your CV now and start optimizing for success.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* JSON-LD Schema */}

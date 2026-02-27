@@ -49,6 +49,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
   const [copied, setCopied] = useState<string | null>(null);
   const [similarJobs, setSimilarJobs] = useState<any[]>(relatedJobs || []);
   const [companyJobs, setCompanyJobs] = useState<any[]>([]);
+  const [userCountry, setUserCountry] = useState<string | null>(null);
 
   const handleCopy = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
@@ -112,6 +113,19 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
     loadAppliedStatus();
     loadCompanies();
     loadCompanyJobs();
+    
+    // Detect user country
+    const detectUserCountry = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        setUserCountry(data.country_name || 'Nigeria');
+      } catch (error) {
+        setUserCountry('Nigeria');
+      }
+    };
+    detectUserCountry();
+    
     if (!relatedJobs || relatedJobs.length === 0) {
       loadSimilarJobs();
     }
@@ -144,12 +158,22 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
 
   const loadSimilarJobs = async () => {
     try {
+      // Wait for user country to be detected
+      if (!userCountry) return;
+      
+      // Use user's detected country, fallback to job's country
+      const jobLocation = typeof job.location === 'object' ? job.location : null;
+      const jobCountry = jobLocation?.country || 'Nigeria';
+      
+      // Use userCountry if available, otherwise use job country
+      const filterCountry = userCountry || jobCountry;
+
       let query = supabase
         .from('jobs')
         .select('id, title, company, location, category, sector, slug')
         .neq('id', jobId)
         .eq('is_published', true)
-        .limit(10);
+        .limit(15);
 
       if (job.category) {
         query = query.eq('category', job.category);
@@ -162,9 +186,18 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
         return;
       }
 
-      if (categoryJobs && categoryJobs.length < 10 && job.sector) {
-        const remainingCount = 10 - categoryJobs.length;
-        const existingIds = categoryJobs.map(j => j.id);
+      // Filter by user's country (include remote jobs)
+      let filteredJobs = (categoryJobs || []).filter(j => {
+        const jLoc = typeof j.location === 'object' ? j.location : null;
+        const jCountry = jLoc?.country || '';
+        const jRemote = jLoc?.remote || false;
+        // Include: user's country OR remote jobs
+        return jCountry.toLowerCase() === filterCountry.toLowerCase() || jRemote;
+      });
+
+      if (filteredJobs.length < 10 && job.sector) {
+        const remainingCount = 10 - filteredJobs.length;
+        const existingIds = filteredJobs.map(j => j.id);
 
         const { data: sectorJobs } = await supabase
           .from('jobs')
@@ -175,9 +208,17 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
           .eq('is_published', true)
           .limit(remainingCount);
 
-        setSimilarJobs([...categoryJobs, ...(sectorJobs || [])]);
+        // Apply country filter for sector jobs too
+        const finalSectorJobs = (sectorJobs || []).filter(j => {
+          const jLoc = typeof j.location === 'object' ? j.location : null;
+          const jCountry = jLoc?.country || '';
+          const jRemote = jLoc?.remote || false;
+          return jCountry.toLowerCase() === filterCountry.toLowerCase() || jRemote;
+        });
+
+        setSimilarJobs([...filteredJobs, ...finalSectorJobs]);
       } else {
-        setSimilarJobs(categoryJobs || []);
+        setSimilarJobs(filteredJobs.slice(0, 10));
       }
     } catch (error) {
       console.error('Error loading similar jobs:', error);
@@ -401,179 +442,112 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                 {/* Quick Links - Only show for non-expired jobs */}
                 {!(job.status === 'expired' || (job.deadline && new Date(job.deadline) < new Date())) && (
                   <div className="flex flex-wrap gap-2 mb-6">
-                    <a
-                      href={`/jobs?posted=today`}
-                      className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                      style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                    >
-                      Today&apos;s jobs
-                    </a>
-                    
-                    {job.category && (
-                      <a
-                        href={`/resources/${job.category}`}
-                        className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                        style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                      >
-                        {job.category.replace(/-/g, ' ')}
-                      </a>
+                    {/* Nigeria: Show 4 buttons */}
+                    {userCountry === 'Nigeria' && (
+                      <>
+                        <a
+                          href={`/jobs?posted=today`}
+                          className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                          style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
+                        >
+                          Today&apos;s jobs
+                        </a>
+                        
+                        {job.category && (
+                          <a
+                            href={`/jobs?category=${job.category}`}
+                            className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                            style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
+                          >
+                            {job.category.replace(/-/g, ' ')} Jobs
+                          </a>
+                        )}
+                        
+                        {typeof job.location === 'object' && job.location?.state && !job.location?.remote && (
+                          <a
+                            href={`/jobs/state/${job.location.state.toLowerCase().replace(/\s+/g, '-')}`}
+                            className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                            style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
+                          >
+                            {job.location.state} Jobs
+                          </a>
+                        )}
+                        
+                        <a
+                          href="/jobs/remote"
+                          className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                          style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
+                        >
+                          Remote Jobs
+                        </a>
+                      </>
                     )}
                     
-                    {typeof job.location === 'object' && job.location?.state && !job.location?.remote && (
-                      <a
-                        href={`/jobs/state/${job.location.state.toLowerCase().replace(/\s+/g, '-')}`}
-                        className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                        style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                      >
-                        {job.location.state} jobs
-                      </a>
-                    )}
-                    
-                    {typeof job.location === 'object' && job.location?.remote && (
-                      <a
-                        href="/jobs/remote"
-                        className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                        style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                      >
-                        Remote jobs
-                      </a>
+                    {/* Other countries: Show 2 buttons */}
+                    {userCountry && userCountry !== 'Nigeria' && (
+                      <>
+                        {job.category && (
+                          <a
+                            href={`/jobs?sector=${encodeURIComponent(job.sector || '')}&sort=match`}
+                            className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                            style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
+                          >
+                            Similar Jobs
+                          </a>
+                        )}
+                        
+                        <a
+                          href={`/jobs?country=${encodeURIComponent(userCountry)}`}
+                          className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                          style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
+                        >
+                          {userCountry} Jobs
+                        </a>
+                        
+                        <a
+                          href="/jobs/remote"
+                          className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                          style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
+                        >
+                          Remote Jobs
+                        </a>
+                      </>
                     )}
                   </div>
                 )}
 
-                {/* Job Expiry Warning - Big Red Banner */}
-                {(job.status === 'expired' || (job.deadline && new Date(job.deadline) < new Date())) && (
-                  <div className="mb-6 -mt-2">
-                    {/* Red Expiry Warning */}
-                    <div className="p-4 bg-red-600 border border-red-700 rounded-lg rounded-b-none flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <svg className="w-6 h-6 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                          <p className="text-lg font-bold text-white">
-                            This job listing has expired
-                          </p>
-                          <p className="text-sm text-red-100 mt-1">
-                            This position is no longer accepting applications
-                          </p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => router.push('/jobs')}
-                        className="text-white hover:text-red-200 p-1"
-                        aria-label="Close"
-                      >
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+                {/* Find Similar Jobs - Shown when job is expired */}
+                {(job.status === 'expired' || (job.deadline && new Date(job.deadline) < new Date())) && similarJobs && similarJobs.length > 0 && (
+                  <div className="mb-6 -mt-2 p-4 bg-white border border-gray-200 rounded-lg">
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                      <p className="text-red-600 font-medium text-center">This job listing has expired</p>
                     </div>
-                    
-                    {/* Find Similar Jobs - White Background */}
-                    {similarJobs && similarJobs.length > 0 && (
-                      <div className="p-4 bg-white border border-gray-200 rounded-lg rounded-t-none">
-                        <p className="text-lg font-bold text-gray-900 mb-3">
-                          Find similar jobs instead:
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {similarJobs.slice(0, 10).map((similarJob) => (
-                            <a
-                              key={similarJob.id}
-                              href={`/jobs/${similarJob.slug || similarJob.id}`}
-                              className="block p-3 bg-white hover:bg-blue-50 rounded-lg transition-colors"
-                            >
-                              <p className="text-base font-medium text-blue-600 line-clamp-1">
-                                {similarJob.title}
-                              </p>
-                              <p className="text-xs text-gray-900 mt-0.5">
-                                {typeof similarJob.company === 'string' ? similarJob.company : similarJob.company?.name || 'Company'}
-                              </p>
-                            </a>
-                          ))}
-                        </div>
-                        {similarJobs.length > 10 && (
-                          <a
-                            href="/jobs"
-                            className="inline-block mt-3 text-sm font-medium text-blue-600 underline hover:text-blue-800"
-                          >
-                            View all similar jobs →
-                          </a>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-200">
-                          <button
-                            onClick={handleSave}
-                            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
-                              saved 
-                                ? 'bg-gray-100 text-gray-700 border border-gray-300' 
-                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                            }`}
-                          >
-                            {saved ? (
-                              <>
-                                <BookmarkCheck size={16} />
-                                Saved
-                              </>
-                            ) : (
-                              <>
-                                <Bookmark size={16} />
-                                Save Job
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            onClick={handleShare}
-                            className="flex-1 sm:flex-none px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                          >
-                            <Share2 size={16} />
-                            Share
-                          </button>
-                        </div>
-
-                        {/* Quick Links */}
-                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200">
-                          <a
-                            href={`/jobs?posted=today`}
-                            className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                            style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                          >
-                            Today&apos;s jobs
-                          </a>
-                          
-                          {job.category && (
-                            <a
-                              href={`/resources/${job.category}`}
-                              className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                              style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                            >
-                              {job.category.replace(/-/g, ' ')}
-                            </a>
-                          )}
-                          
-                          {typeof job.location === 'object' && job.location?.state && !job.location?.remote && (
-                            <a
-                              href={`/jobs/state/${job.location.state.toLowerCase().replace(/\s+/g, '-')}`}
-                              className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                              style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                            >
-                              {job.location.state} jobs
-                            </a>
-                          )}
-                          
-                          {typeof job.location === 'object' && job.location?.remote && (
-                            <a
-                              href="/jobs/remote"
-                              className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                              style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15`, color: theme.colors.primary.DEFAULT }}
-                            >
-                              Remote jobs
-                            </a>
-                          )}
-                        </div>
-                      </div>
+                    <p className="text-lg font-bold text-gray-900 mb-3">
+                      Find similar jobs instead:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {similarJobs.slice(0, 10).map((similarJob) => (
+                        <a
+                          key={similarJob.id}
+                          href={`/jobs/${similarJob.slug || similarJob.id}`}
+                          className="block p-3 bg-white hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <p className="text-base font-medium text-blue-600 line-clamp-1">
+                            {similarJob.title}
+                          </p>
+                          <p className="text-xs text-gray-900 mt-0.5">
+                            {typeof similarJob.company === 'string' ? similarJob.company : similarJob.company?.name || 'Company'}
+                          </p>
+                        </a>
+                      ))}
+                    </div>
+                    {similarJobs.length > 10 && (
+                      <a
+                        href="/jobs"
+                        className="inline-block mt-3 text-sm font-medium text-blue-600 underline hover:text-blue-800"
+                      >
+                        View all similar jobs →
+                      </a>
                     )}
                   </div>
                 )}
@@ -678,7 +652,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900">About the Company</h2>
                    <div
-                     className="text-sm leading-relaxed text-gray-700 prose prose-sm max-w-none"
+                     className="text-base leading-loose text-gray-700 prose prose-sm max-w-none"
                      dangerouslySetInnerHTML={{ __html: typeof job.about_company === 'string' ? job.about_company : '' }}
                    />
                 </div>
@@ -689,7 +663,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900">Job Description</h2>
                    <div
-                     className="text-sm leading-relaxed text-gray-700 prose prose-sm max-w-none"
+                     className="text-base leading-loose text-gray-700 prose prose-sm max-w-none"
                      dangerouslySetInnerHTML={{ __html: typeof job.description === 'string' ? job.description : '' }}
                    />
                 </div>
@@ -722,9 +696,9 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                   return (
                     <div className="bg-white rounded-xl shadow-sm p-6">
                       <h2 className="text-xl font-semibold mb-4 text-gray-900">Key Responsibilities</h2>
-                      <ul className="space-y-3">
+                      <ul className="space-y-5">
                          {responsibilitiesArray.map((responsibility: string, index: number) => (
-                           <li key={index} className="flex items-start gap-3 text-sm text-gray-700">
+                           <li key={index} className="flex items-start gap-3 text-base text-gray-700">
                              <span className="flex-shrink-0 w-2 h-2 rounded-full mt-2" style={{ backgroundColor: theme.colors.primary.DEFAULT }}></span>
                              <span>{responsibility}</span>
                            </li>
@@ -745,9 +719,9 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                   return (
                     <div className="bg-white rounded-xl shadow-sm p-6">
                       <h2 className="text-xl font-semibold mb-4 text-gray-900">Qualifications</h2>
-                      <ul className="space-y-3">
+                      <ul className="space-y-5">
 {qualificationsArray.map((qualification: string, index: number) => (
-                           <li key={index} className="flex items-start gap-3 text-sm text-gray-700">
+                           <li key={index} className="flex items-start gap-3 text-base text-gray-700">
                              <span className="flex-shrink-0 w-2 h-2 rounded-full mt-2" style={{ backgroundColor: theme.colors.primary.DEFAULT }}></span>
                              <span>{qualification}</span>
                            </li>
@@ -768,9 +742,9 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                   return (
                     <div className="bg-white rounded-xl shadow-sm p-6">
                       <h2 className="text-xl font-semibold mb-4 text-gray-900">Benefits & Perks</h2>
-                      <ul className="space-y-3">
+                      <ul className="space-y-5">
 {benefitsArray.map((benefit: string, index: number) => (
-                           <li key={index} className="flex items-start gap-3 text-sm text-gray-700">
+                           <li key={index} className="flex items-start gap-3 text-base text-gray-700">
                              <Award size={20} className="flex-shrink-0 mt-0.5" style={{ color: theme.colors.primary.DEFAULT }} />
                              <span>{benefit}</span>
                            </li>
@@ -782,8 +756,15 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                 return null;
               })()}
 
-              {/* How to Apply - Hide when job is expired */}
-              {!(job.status === 'expired' || (job.deadline && new Date(job.deadline) < new Date())) && (job.application?.email || job.application_email || job.application?.phone || job.application_phone || job.application?.link || job.application?.url || job.application_url) && (
+              {/* How to Apply - Show message when job is expired */}
+              {(job.status === 'expired' || (job.deadline && new Date(job.deadline) < new Date())) ? (
+                <div id="how-to-apply" className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900">How to Apply</h2>
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 font-medium">This job has expired</p>
+                  </div>
+                </div>
+              ) : (job.application?.email || job.application_email || job.application?.phone || job.application_phone || job.application?.link || job.application?.url || job.application_url) && (
                 <div id="how-to-apply" className="bg-white rounded-xl shadow-sm p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900">How to Apply</h2>
                   

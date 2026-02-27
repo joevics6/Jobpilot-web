@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, MessageCircle, FileCheck, Clock, TrendingUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, MessageCircle, FileCheck, Clock, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
 import { InterviewPrepService, InterviewSession } from '@/lib/services/interviewPrepService';
@@ -12,7 +12,6 @@ export default function InterviewPage() {
   const router = useRouter();
   const [sessionHistory, setSessionHistory] = useState<InterviewSession[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [seoExpanded, setSeoExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +76,31 @@ export default function InterviewPage() {
             >
               <Plus size={20} />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">1</div>
+              <p className="text-sm text-gray-600">Start a new practice session</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">2</div>
+              <p className="text-sm text-gray-600">Answer AI-generated interview questions</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">3</div>
+              <p className="text-sm text-gray-600">Get instant feedback on your answers</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold text-sm flex-shrink-0">4</div>
+              <p className="text-sm text-gray-600">Track progress and improve over time</p>
+            </div>
           </div>
         </div>
       </div>
@@ -188,112 +212,83 @@ export default function InterviewPage() {
         }}
       />
 
-      {/* SEO Content - Hidden by accordion */}
+      {/* SEO Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="border-t border-gray-200 pt-8">
-          <button
-            onClick={() => setSeoExpanded(!seoExpanded)}
-            className="flex items-center justify-between w-full text-left"
-          >
-            <h2 className="text-lg font-semibold text-gray-900">Learn More About Interview Practice</h2>
-            <ChevronDown
-              size={20}
-              className={`text-gray-500 transition-transform ${seoExpanded ? 'rotate-180' : ''}`}
-            />
-          </button>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Learn More About Interview Practice</h2>
           
-          {seoExpanded && (
-            <div className="mt-6 space-y-6 text-gray-700">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">AI-Powered Interview Practice in Nigeria</h3>
-                <p className="mb-4">
-                  Prepare for your dream job with our AI-powered interview practice tool. Whether you're applying to top companies in Lagos, Abuja, or seeking remote positions, our platform helps you practice with realistic interview questions tailored to your target role.
-                </p>
-                <p>
-                  Our AI interviewer asks relevant questions based on the job description you provide, evaluates your answers in real-time, and gives you constructive feedback to improve your responses. This is especially valuable for fresh graduates and experienced professionals alike.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">How It Works</h3>
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Select a job from our database or paste a job description</li>
-                  <li>Optionally upload your CV for personalized questions</li>
-                  <li>Practice answering interview questions</li>
-                  <li>Get instant AI feedback on your answers</li>
-                  <li>Review your performance and improve</li>
-                </ol>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Why Practice Interviews?</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Reduce interview anxiety by practicing beforehand</li>
-                  <li>Get familiar with common interview questions in your industry</li>
-                  <li>Improve your communication skills</li>
-                  <li>Receive personalized feedback to strengthen your answers</li>
-                  <li>Build confidence before the real interview</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Tips for Successful Interviews</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Research the company thoroughly before the interview</li>
-                  <li>Practice answering common questions out loud</li>
-                  <li>Use the STAR method for behavioral questions</li>
-                  <li>Prepare questions to ask the interviewer</li>
-                  <li>Dress professionally and test your technology (for virtual interviews)</li>
-                  <li>Get enough rest the night before</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Common Interview Questions in Nigeria</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Tell me about yourself</li>
-                  <li>What are your strengths and weaknesses?</li>
-                  <li>Why do you want to work for this company?</li>
-                  <li>Where do you see yourself in 5 years?</li>
-                  <li>Why should we hire you?</li>
-                  <li>Do you have any questions for us?</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Virtual Interview Tips</h3>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Test your internet connection and camera beforehand</li>
-                  <li>Choose a quiet, well-lit location</li>
-                  <li>Have a backup plan for technical issues</li>
-                  <li>Look at the camera when speaking</li>
-                  <li>Have your CV and notes nearby</li>
-                  <li>Close unnecessary applications on your computer</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Interview Practice for Specific Roles</h3>
-                <p className="mb-4">
-                  Our AI adapts to various job roles and industries. Practice for positions in Technology, Finance, Marketing, Healthcare, Education, and more. Each industry has its unique interview style and question types.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Success Stories</h3>
-                <p className="mb-4">
-                  Many job seekers in Nigeria have improved their interview performance using our platform. Practice regularly, implement the feedback, and increase your chances of landing your desired job.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Get Started Today</h3>
-                <p>
-                  Don't let interview anxiety hold you back. Start practicing now and build the confidence you need to ace your next interview. With JobMeter's interview practice tool, you're one step closer to your dream job.
-                </p>
-              </div>
+          <div className="space-y-8 text-gray-700">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">AI-Powered Interview Practice in Nigeria</h3>
+              <p className="mb-4">
+                Prepare for your dream job with our AI-powered interview practice tool. Whether you're applying to top companies in Lagos, Abuja, or seeking remote positions, our platform helps you practice with realistic interview questions tailored to your target role.
+              </p>
+              <p>
+                Our AI interviewer asks relevant questions based on the job description you provide, evaluates your answers in real-time, and gives you constructive feedback to improve your responses. This is especially valuable for fresh graduates and experienced professionals alike.
+              </p>
             </div>
-          )}
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Why Practice Interviews?</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Reduce interview anxiety by practicing beforehand</li>
+                <li>Get familiar with common interview questions in your industry</li>
+                <li>Improve your communication skills</li>
+                <li>Receive personalized feedback to strengthen your answers</li>
+                <li>Build confidence before the real interview</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Tips for Successful Interviews</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Research the company thoroughly before the interview</li>
+                <li>Practice answering common questions out loud</li>
+                <li>Use the STAR method for behavioral questions</li>
+                <li>Prepare questions to ask the interviewer</li>
+                <li>Dress professionally and test your technology (for virtual interviews)</li>
+                <li>Get enough rest the night before</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Common Interview Questions in Nigeria</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Tell me about yourself</li>
+                <li>What are your strengths and weaknesses?</li>
+                <li>Why do you want to work for this company?</li>
+                <li>Where do you see yourself in 5 years?</li>
+                <li>Why should we hire you?</li>
+                <li>Do you have any questions for us?</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Virtual Interview Tips</h3>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Test your internet connection and camera beforehand</li>
+                <li>Choose a quiet, well-lit location</li>
+                <li>Have a backup plan for technical issues</li>
+                <li>Look at the camera when speaking</li>
+                <li>Have your CV and notes nearby</li>
+                <li>Close unnecessary applications on your computer</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Interview Practice for Specific Roles</h3>
+              <p className="mb-4">
+                Our AI adapts to various job roles and industries. Practice for positions in Technology, Finance, Marketing, Healthcare, Education, and more. Each industry has its unique interview style and question types.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Get Started Today</h3>
+              <p>
+                Don't let interview anxiety hold you back. Start practicing now and build the confidence you need to ace your next interview. With JobMeter's interview practice tool, you're one step closer to your dream job.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* JSON-LD Schema */}

@@ -7,7 +7,13 @@ import { supabase } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 import { ClipboardList, FileText, ArrowLeft, Lock, Loader2 } from 'lucide-react';
 
-export default function CompanyQuizClient({ company }: { company: string }) {
+interface CompanyData {
+  id?: string;
+  name?: string;
+  description?: string;
+}
+
+export default function CompanyQuizClient({ company, companyData }: { company: string; companyData?: CompanyData | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<'objective' | 'theory' | null>(null);
@@ -83,7 +89,7 @@ export default function CompanyQuizClient({ company }: { company: string }) {
           </div>
         </div>
 
-        <div className="max-w-sm mx-auto px-4 py-6">
+        <div className="max-w-md mx-auto px-4 py-6">
           <div className="bg-white rounded-xl p-5 shadow-sm" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15` }}>
@@ -127,7 +133,7 @@ export default function CompanyQuizClient({ company }: { company: string }) {
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
       <div className="px-4 py-3" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
-        <div className="max-w-lg mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/tools/quiz" className="flex items-center gap-2 text-white/80 hover:text-white text-sm">
             <ArrowLeft size={18} />
             <span className="hidden sm:inline">All Companies</span>
@@ -136,7 +142,7 @@ export default function CompanyQuizClient({ company }: { company: string }) {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="text-center mb-6">
           <div className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: `${theme.colors.primary.DEFAULT}15` }}>
             <span className="text-2xl font-bold" style={{ color: theme.colors.primary.DEFAULT }}>
@@ -189,6 +195,16 @@ export default function CompanyQuizClient({ company }: { company: string }) {
         <p className="text-xs text-gray-500 text-center mt-4">
          <b>Disclaimer:</b> This quiz is for educational purposes only. JobMeter has no affiliation to {company}.
         </p>
+
+        {/* SEO Content */}
+        {companyData?.description && (
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="bg-white rounded-xl p-5 shadow-sm" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
+              <h2 className="text-lg font-bold text-gray-900 mb-3">About {company}</h2>
+              <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: companyData.description }} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

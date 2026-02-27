@@ -12,13 +12,29 @@ interface JobFiltersProps {
     employmentType?: string[];
     salaryRange?: { min: number; max: number };
     remote?: boolean;
+    country?: string;
   };
   onFiltersChange: (filters: any) => void;
   isOpen: boolean;
   onToggle: () => void;
 }
 
-const locations = [
+const countries = [
+  'Global', 'Nigeria', 'United States', 'United Kingdom', 'Canada', 'Australia', 
+  'Germany', 'France', 'India', 'Kenya', 'South Africa', 'Ghana',
+  'United Arab Emirates', 'Saudi Arabia', 'Singapore', 'Netherlands',
+  'Spain', 'Italy', 'Brazil', 'Mexico', 'Japan', 'China', 'Ireland',
+  'Switzerland', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland',
+  'Portugal', 'Austria', 'New Zealand', 'Israel', 'Malaysia',
+  'Philippines', 'Indonesia', 'Thailand', 'Vietnam', 'South Korea', 'Egypt',
+  'Argentina', 'Bangladesh', 'Belgium', 'Colombia', 'Czech Republic', 'Chile',
+  'Ecuador', 'Ethiopia', 'Greece', 'Hong Kong', 'Hungary', 'Iraq',
+  'Jordan', 'Kuwait', 'Lebanon', 'Morocco', 'Oman', 'Pakistan', 'Peru',
+  'Qatar', 'Romania', 'Russia', 'Sri Lanka', 'Taiwan', 'Tanzania', 'Turkey',
+  'Ukraine', 'Venezuela', 'Zimbabwe'
+];
+
+const nigerianStates = [
   'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 
   'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT - Abuja',
   'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 
@@ -231,13 +247,13 @@ export default function JobFilters({ filters, onFiltersChange, isOpen, onToggle 
   };
 
   const clearAllFilters = () => {
-    // Optimized clearing - create new object once
     const clearedFilters = {
       search: filters.search,
       location: [] as string[],
       sector: [] as string[],
       employmentType: [] as string[],
-      remote: false
+      remote: false,
+      country: ''
     };
     onFiltersChange(clearedFilters);
   };
@@ -246,7 +262,8 @@ export default function JobFilters({ filters, onFiltersChange, isOpen, onToggle 
     (filters.location?.length || 0) > 0 ||
     (filters.sector?.length || 0) > 0 ||
     (filters.employmentType?.length || 0) > 0 ||
-    filters.remote
+    filters.remote ||
+    filters.country
   );
 
   return (
@@ -286,15 +303,37 @@ export default function JobFilters({ filters, onFiltersChange, isOpen, onToggle 
               </button>
             )}
 
-            {/* Location Filter */}
-            <div className="space-y-2">
-              <MultiSelectDropdown
-                options={locations}
-                selected={filters.location || []}
-                onChange={(selected) => onFiltersChange({ ...filters, location: selected })}
-                placeholder="Select locations..."
-                label="Location"
-              />
+            {/* Country & State Filter - Same row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Country Filter */}
+              <div className="space-y-2">
+                <MultiSelectDropdown
+                  options={countries}
+                  selected={filters.country ? [filters.country] : []}
+                  onChange={(selected) => {
+                    if (selected[0] === 'Global') {
+                      onFiltersChange({ ...filters, country: '', location: [] });
+                    } else {
+                      onFiltersChange({ ...filters, country: selected[0] || '', location: selected[0] === 'Nigeria' ? filters.location : [] });
+                    }
+                  }}
+                  placeholder="Select country..."
+                  label="Country"
+                />
+              </div>
+
+              {/* State Filter - Only show for Nigeria */}
+              {filters.country === 'Nigeria' && (
+                <div className="space-y-2">
+                  <MultiSelectDropdown
+                    options={nigerianStates}
+                    selected={filters.location || []}
+                    onChange={(selected) => onFiltersChange({ ...filters, location: selected })}
+                    placeholder="Select states..."
+                    label="State"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Sector Filter */}

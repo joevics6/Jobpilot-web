@@ -39,6 +39,7 @@ const REPORT_TYPES = [
 export default function ScamCheckerPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Entity[]>([]);
+  const [allEntities, setAllEntities] = useState<Entity[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [entityReports, setEntityReports] = useState<Report[]>([]);
@@ -61,6 +62,22 @@ export default function ScamCheckerPage() {
   });
 
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const fetchAllEntities = async () => {
+      const { data } = await supabase
+        .from('reported_entities')
+        .select('*')
+        .eq('is_published', true)
+        .order('report_count', { ascending: false })
+        .limit(100);
+      
+      if (data) {
+        setAllEntities(data);
+      }
+    };
+    fetchAllEntities();
+  }, []);
 
   const handleSearch = async (query: string) => {
     if (query.length < 2) {
@@ -258,6 +275,31 @@ export default function ScamCheckerPage() {
         </div>
       </div>
 
+      {/* How It Works */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-bold text-sm flex-shrink-0">1</div>
+              <p className="text-sm text-gray-600">Search for a company or recruiter name</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-bold text-sm flex-shrink-0">2</div>
+              <p className="text-sm text-gray-600">View reported scams and warnings</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-bold text-sm flex-shrink-0">3</div>
+              <p className="text-sm text-gray-600">Check verification status</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-bold text-sm flex-shrink-0">4</div>
+              <p className="text-sm text-gray-600">Report suspicious companies to warn others</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="px-6 py-6 max-w-4xl mx-auto">
         {/* Warning Banner */}
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3">
@@ -324,6 +366,51 @@ export default function ScamCheckerPage() {
             <p className="mt-2 text-sm text-gray-500">No results found. Be the first to report this company!</p>
           )}
         </div>
+
+        {/* Full Scammer List Table */}
+        {allEntities.length > 0 && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Shield size={20} className="text-red-600" />
+              Reported Scammers ({allEntities.length})
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Company/Recruiter</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Type</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Status</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Reports</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allEntities.map((entity) => {
+                    const status = getStatusBadge(entity.verification_status);
+                    const StatusIcon = status.icon;
+                    return (
+                      <tr 
+                        key={entity.id} 
+                        className="border-b hover:bg-gray-50 cursor-pointer"
+                        onClick={() => setSelectedEntity(entity)}
+                      >
+                        <td className="py-3 px-2 font-medium text-gray-900">{entity.company_name || 'Unknown'}</td>
+                        <td className="py-3 px-2 text-gray-600 capitalize">{entity.entity_type}</td>
+                        <td className="py-3 px-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${status.color}`}>
+                            <StatusIcon size={12} />
+                            {status.label}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-gray-600">{entity.report_count}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Selected Entity Details */}
         {selectedEntity && (
