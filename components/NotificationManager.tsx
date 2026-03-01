@@ -36,6 +36,16 @@ export default function NotificationManager() {
 
   useEffect(() => {
     const detectCountry = async () => {
+      // First check if user manually selected a country in job filters
+      const userChangedCountry = localStorage.getItem('user_changed_country');
+      const savedCountry = localStorage.getItem('user_country');
+      
+      if (userChangedCountry === 'true' && savedCountry) {
+        setCountryName(savedCountry);
+        return;
+      }
+      
+      // Otherwise detect from IP (geo location)
       try {
         const response = await fetch('https://ipapi.co/json/');
         const data = await response.json();
@@ -56,8 +66,20 @@ export default function NotificationManager() {
     const subscribed = localStorage.getItem('email-subscribed');
     if (subscribed) return;
 
+    const lastShown = localStorage.getItem('email-popup-last-shown');
+    const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    
+    if (lastShown) {
+      const lastShownTime = parseInt(lastShown);
+      const now = Date.now();
+      if (now - lastShownTime < ONE_WEEK_MS) {
+        return;
+      }
+    }
+
     const timer = setTimeout(() => {
       setShowPopup(true);
+      localStorage.setItem('email-popup-last-shown', Date.now().toString());
     }, 30000);
 
     return () => clearTimeout(timer);
@@ -120,8 +142,11 @@ export default function NotificationManager() {
                 You're browsing from <span className="font-bold text-gray-900">{countryName || 'United States'}</span>
               </p>
               <h3 className="font-bold text-blue-600">
-                Get daily {countryName || 'United States'}, remote, and global job alerts
+                Get Daily Remote and Global Job Updates.
               </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Stay ahead of every opportunity
+              </p>
             </div>
 
             {success ? (

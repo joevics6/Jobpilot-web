@@ -27,7 +27,7 @@ const STORAGE_KEYS = {
 
 // ✅ OPTIMIZATION: Pagination constants
 const JOBS_PER_PAGE_DISPLAY = 50; // Jobs per page for display
-const CACHE_DURATION = 3 * 60 * 60 * 1000; // 3 hours
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 export default function JobList() {
   const router = useRouter();
@@ -38,6 +38,8 @@ export default function JobList() {
   const [activeTab, setActiveTab] = useState<'latest' | 'matches'>('latest');
   const [latestJobs, setLatestJobs] = useState<JobUI[]>([]);
   const [latestJobsLoading, setLatestJobsLoading] = useState(true);
+  const [loadingMoreJobs, setLoadingMoreJobs] = useState(false);
+  const [allJobsLoaded, setAllJobsLoaded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
   const [user, setUser] = useState<any>(null);
@@ -293,34 +295,34 @@ export default function JobList() {
   // ✅ NEW: Fetch latest jobs on mount (Latest tab is default)
   useEffect(() => {
     if (!authChecked) return;
+    if (activeTab !== 'latest') return;
     
-    // Only fetch if on latest tab and no data loaded yet
-    if (activeTab === 'latest' && latestJobs.length === 0) {
-      const cachedLatestJobsKey = 'latest_jobs_cache';
-      const cachedLatestTimestampKey = 'latest_jobs_cache_timestamp';
+    const loadJobs = async () => {
+      const now = Date.now();
+      const cachedJobs = localStorage.getItem('latest_jobs_cache');
+      const cachedTimestamp = localStorage.getItem('latest_jobs_cache_timestamp');
       
-      try {
-        const cachedLatestJobs = localStorage.getItem(cachedLatestJobsKey);
-        const cachedTimestamp = localStorage.getItem(cachedLatestTimestampKey);
+      // Try to load from localStorage first (first 50 jobs)
+      if (cachedJobs && cachedTimestamp) {
+        const timestamp = parseInt(cachedTimestamp, 10);
+        const isCacheValid = now - timestamp < CACHE_DURATION;
         
-        if (cachedLatestJobs && cachedTimestamp) {
-          const timestamp = parseInt(cachedTimestamp, 10);
-          const now = Date.now();
-          const isCacheValid = now - timestamp < CACHE_DURATION;
-          
-          if (isCacheValid) {
-            const parsedJobs = JSON.parse(cachedLatestJobs);
+        if (isCacheValid) {
+          try {
+            const parsedJobs = JSON.parse(cachedJobs);
             setLatestJobs(parsedJobs);
-            console.log(`Loaded ${parsedJobs.length} latest jobs from cache`);
-            return;
+            console.log(`Loaded ${parsedJobs.length} jobs from cache`);
+          } catch (e) {
+            console.error('Error parsing cached jobs:', e);
           }
         }
-      } catch (error) {
-        console.error('Error checking latest jobs cache:', error);
       }
       
-      fetchLatestJobs();
-    }
+      // Always fetch all jobs from Supabase (background fetch)
+      await fetchLatestJobs();
+    };
+    
+    loadJobs();
   }, [authChecked, activeTab]);
 
   // ✅ MODIFIED: Only fetch matches when user switches to Matches tab
@@ -634,7 +636,7 @@ export default function JobList() {
     };
   };
 
-  // ✅ NEW: Fetch all latest jobs from last 30 days at once
+  // ✅ NEW: Fetch first 50 latest jobs, then load remaining in background
   const fetchLatestJobs = async () => {
     try {
       setLatestJobsLoading(true);
@@ -648,7 +650,7 @@ export default function JobList() {
         .from('jobs')
         .select('*')
         .eq('status', 'active')
-        .gte('posted_date', thirtyDaysAgoStr) // ✅ Filter for last 30 days
+        .gte('posted_date', thirtyDaysAgoStr)
         .order('posted_date', { ascending: false })
         .order('created_at', { ascending: false });
       
@@ -660,29 +662,55 @@ export default function JobList() {
         query = query.gte('posted_date', todayStr);
       }
       
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      console.log(`Fetched ALL ${data?.length || 0} jobs from last 30 days`);
-
-      // Transform to UI format without matching calculation
-      const uiJobs = (data || []).map((job: any) => transformJobToUI(job, 0, null));
+      // ✅ Get total count first
+      const { count, error: countError } = await supabase
+        .from('jobs')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .gte('posted_date', thirtyDaysAgoStr);
       
-      // Set all jobs at once
+      // ✅ Fetch all jobs (up to 1000)
+      let allData: any[] = [];
+      const maxFetch = Math.min(count || 1000, 1000);
+      
+      if (maxFetch <= 1000) {
+        const { data, error } = await query.range(0, maxFetch - 1);
+        if (!error && data) allData = data;
+      } else {
+        // Fetch in batches for > 1000
+        let offset = 0;
+        while (offset < maxFetch) {
+          const { data: batchData, error: batchError } = await query.range(offset, offset + 999);
+          if (!batchError && batchData) {
+            allData = [...allData, ...batchData];
+          }
+          offset += 1000;
+        }
+      }
+      
+      console.log(`Fetched ${allData.length} jobs from last 30 days`);
+      
+      // Transform to UI format
+      const uiJobs = allData.map((job: any) => transformJobToUI(job, 0, null));
+      
+      // Set all jobs to state
       setLatestJobs(uiJobs);
       setCurrentPage(1);
+      setAllJobsLoaded(true);
       
-      // Cache the latest jobs
+      // ✅ Cache only the first 50 to localStorage (safe size)
+      const first50 = uiJobs.slice(0, 50);
       try {
-        localStorage.setItem('latest_jobs_cache', JSON.stringify(uiJobs));
+        localStorage.setItem('latest_jobs_cache', JSON.stringify(first50));
         localStorage.setItem('latest_jobs_cache_timestamp', Date.now().toString());
+        console.log(`Cached first 50 jobs to localStorage`);
       } catch (cacheError) {
         console.error('Error caching latest jobs:', cacheError);
       }
+      
+      setLatestJobsLoading(false);
     } catch (error) {
       console.error('Error fetching latest jobs:', error);
-    } finally {
       setLatestJobsLoading(false);
     }
   };
@@ -850,7 +878,21 @@ export default function JobList() {
         const titleMatch = job.title.toLowerCase().includes(query);
         const companyMatch = job.company.toLowerCase().includes(query);
         const descriptionMatch = job.description?.toLowerCase().includes(query) || false;
-        if (!titleMatch && !companyMatch && !descriptionMatch) return false;
+        
+        // Check location (city, state, country)
+        let locationMatch = false;
+        const jobLoc = job.location;
+        if (typeof jobLoc === 'string') {
+          locationMatch = jobLoc.toLowerCase().includes(query);
+        } else if (jobLoc && typeof jobLoc === 'object') {
+          const loc = jobLoc as Record<string, unknown>;
+          const city = String(loc.city || '').toLowerCase();
+          const state = String(loc.state || '').toLowerCase();
+          const country = String(loc.country || '').toLowerCase();
+          locationMatch = city.includes(query) || state.includes(query) || country.includes(query);
+        }
+        
+        if (!titleMatch && !companyMatch && !descriptionMatch && !locationMatch) return false;
       }
       
       // Location filter (for Nigerian states)
@@ -1129,7 +1171,7 @@ export default function JobList() {
               <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl opacity-0 group-focus-within:opacity-30 transition-opacity blur"></div>
               <input
                 type="text"
-                placeholder="Search by job title, company, or keywords..."
+                placeholder="Search by job title, company, location, or keywords..."
                 value={filters.search}
                 onChange={(e) => {
                   const newSearch = e.target.value;
@@ -1386,6 +1428,14 @@ export default function JobList() {
               </div>
             )}
 
+            {/* Background Loading Indicator */}
+            {loadingMoreJobs && !latestJobsLoading && (
+              <div className="flex items-center justify-center gap-2 py-2">
+                <div className="w-4 h-4 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                <span className="text-sm" style={{ color: theme.colors.text.secondary }}>Loading more jobs...</span>
+              </div>
+            )}
+
             {/* Category Filters - Horizontal scroll on mobile, centered on desktop */}
             <div className="flex gap-2 overflow-x-auto pb-2 md:flex-wrap md:overflow-visible md:justify-center scrollbar-hide">
               {categories.filter(cat => {
@@ -1408,28 +1458,46 @@ export default function JobList() {
               })}
             </div>
 
-            {/* Results Count and Clear Filters */}
+            {/* Results Count, Clear Filters, and Refresh */}
             <div className="flex items-center justify-between">
-              {!latestJobsLoading && hasActiveFilters() && (
-                <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
+                {!latestJobsLoading && (
                   <p className="text-sm font-medium" style={{ color: theme.colors.text.primary }}>
                     {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found
                   </p>
+                )}
+                {hasActiveFilters() && !latestJobsLoading && (
                   <button
                     onClick={clearAllFilters}
                     className="text-xs text-red-600 hover:text-red-700 font-medium transition-colors"
                   >
                     Clear all filters
                   </button>
-                </div>
-              )}
+                )}
+              </div>
               
-              {refreshingMatches && (
-                <div className="flex items-center gap-2 text-sm" style={{ color: theme.colors.text.secondary }}>
-                  <RefreshCw size={14} className="animate-spin" />
-                  Refreshing...
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {(refreshingMatches || loadingMoreJobs) && (
+                  <div className="flex items-center gap-2 text-sm" style={{ color: theme.colors.text.secondary }}>
+                    <RefreshCw size={14} className="animate-spin" />
+                    {loadingMoreJobs ? 'Loading more...' : 'Refreshing...'}
+                  </div>
+                )}
+                {/* Refresh button for Latest Jobs tab */}
+                {activeTab === 'latest' && !latestJobsLoading && !loadingMoreJobs && (
+                  <button
+                    onClick={handleRefreshMatches}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
+                    style={{
+                      backgroundColor: theme.colors.background.DEFAULT,
+                      borderColor: theme.colors.border.DEFAULT,
+                    }}
+                  >
+                    <RefreshCw size={12} />
+                    Refresh
+                  </button>
+                )}
+              </div>
             </div>
 
         {/* Filters Modal */}
