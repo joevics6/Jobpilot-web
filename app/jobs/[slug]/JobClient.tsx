@@ -428,13 +428,19 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                     }
                     
                     return (
-                      <a 
-                        href={`/companies?name=${encodeURIComponent(companyName)}`}
-                        className="hover:underline transition-colors"
-                        style={{ color: theme.colors.primary.DEFAULT }}
-                      >
-                        {companyName}
-                      </a>
+                      <>
+                        {companies.some(c => c.name === companyName) ? (
+                          <a 
+                            href={`/companies?name=${encodeURIComponent(companyName)}`}
+                            className="hover:underline transition-colors"
+                            style={{ color: theme.colors.primary.DEFAULT }}
+                          >
+                            {companyName}
+                          </a>
+                        ) : (
+                          <span>{companyName}</span>
+                        )}
+                      </>
                     );
                   })()}
                 </p>

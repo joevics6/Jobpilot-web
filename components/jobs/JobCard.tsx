@@ -112,6 +112,7 @@ export interface JobUI {
   postedDate?: string;
   posted_date?: string;
   sector?: string;
+  role_category?: string;
 
   /** Used for search & filtering */
   description?: string;

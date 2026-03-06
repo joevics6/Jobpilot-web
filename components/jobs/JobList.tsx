@@ -29,7 +29,13 @@ const STORAGE_KEYS = {
 const JOBS_PER_PAGE_DISPLAY = 50; // Jobs per page for display
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
-export default function JobList() {
+interface JobListProps {
+  initialCountry?: string;
+  initialRoleCategory?: string;
+  initialJobType?: string;
+}
+
+export default function JobList({ initialCountry, initialRoleCategory, initialJobType }: JobListProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -71,6 +77,8 @@ export default function JobList() {
     salaryRange: undefined as { min: number; max: number } | undefined,
     remote: false,
     country: '',
+    roleCategory: '',
+    jobType: '',
   });
   const [detectedCountry, setDetectedCountry] = useState<string | null>(null);
 
@@ -179,8 +187,35 @@ export default function JobList() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Geo-detection: auto-detect country on first visit only
+  // Set initial country from page prop (for country-specific pages like /jobs/us)
   useEffect(() => {
+    if (initialCountry) {
+      setFilters(prev => ({ ...prev, country: initialCountry }));
+      setDetectedCountry(initialCountry);
+      localStorage.setItem('user_country', initialCountry);
+      localStorage.setItem('user_changed_country', 'true');
+    }
+  }, [initialCountry]);
+
+  // Set initial role category from page prop (for remote category pages)
+  useEffect(() => {
+    if (initialRoleCategory) {
+      setFilters(prev => ({ ...prev, roleCategory: initialRoleCategory }));
+    }
+  }, [initialRoleCategory]);
+
+  // Set initial job type from page prop (e.g. /jobs/remote)
+  useEffect(() => {
+    if (initialJobType) {
+      setFilters(prev => ({ ...prev, jobType: initialJobType }));
+    }
+  }, [initialJobType]);
+
+  // Geo-detection: auto-detect country on first visit only
+  // ✅ SKIP entirely on country-specific pages — initialCountry locks the filter, no localStorage interference
+  useEffect(() => {
+    if (initialCountry) return;
+
     const detectCountry = async () => {
       const hasVisitedBefore = localStorage.getItem('has_visited_jobs');
       const userChangedCountry = localStorage.getItem('user_changed_country');
@@ -601,9 +636,11 @@ export default function JobList() {
         const date = new Date(dateString);
         const now = new Date();
         const diffInMs = now.getTime() - date.getTime();
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
         const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
         
-        if (diffInDays === 0) return 'Today';
+        if (diffInHours <= 1) return 'Just now';
+        if (diffInHours < 24) return `${diffInHours}h ago`;
         if (diffInDays === 1) return '1 day ago';
         if (diffInDays < 7) return `${diffInDays} days ago`;
         if (diffInDays < 30) {
@@ -627,6 +664,8 @@ export default function JobList() {
       title: job.title || 'Untitled Job',
       company: companyStr,
       location: locationStr,
+      rawLocation: job.location, // ✅ preserve raw location object for filtering
+      country: job.country || '', // ✅ dedicated country column
       salary: salaryStr,
       match: finalMatchScore,
       calculatedTotal: finalMatchScore,
@@ -634,6 +673,7 @@ export default function JobList() {
       breakdown: finalBreakdown,
       postedDate: getRelativeTime(job.posted_date || job.created_at),
       sector: job.sector || '',
+      role_category: job.role_category || '',
       description: job.description || job.job_description || '',
     };
   };
@@ -650,11 +690,21 @@ export default function JobList() {
       
       let query = supabase
         .from('jobs')
-        .select('*')
+        .select('id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, description')
         .eq('status', 'active')
         .gte('posted_date', thirtyDaysAgoStr)
         .order('posted_date', { ascending: false })
         .order('created_at', { ascending: false });
+
+      // ✅ Server-side country filter — only applies on country-specific pages
+      if (initialCountry) {
+        query = query.eq('country', initialCountry);
+      }
+
+      // ✅ Server-side job type filter — only applies on job-type pages (e.g. /jobs/remote)
+      if (initialJobType) {
+        query = query.eq('job_type', initialJobType);
+      }
       
       // Filter for today's jobs if posted=today (overrides 30-day filter)
       const postedParam = searchParams.get('posted');
@@ -692,11 +742,14 @@ export default function JobList() {
       setLoadingMoreJobs(true);
       
       // Get total count
-      const { count, error: countError } = await supabase
+      let countQuery = supabase
         .from('jobs')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active')
         .gte('posted_date', thirtyDaysAgoStr);
+      if (initialCountry) countQuery = countQuery.eq('country', initialCountry);
+      if (initialJobType) countQuery = countQuery.eq('job_type', initialJobType);
+      const { count, error: countError } = await countQuery;
       
       if (!countError && count && count > 50) {
         const remainingCount = count - 50;
@@ -745,10 +798,10 @@ export default function JobList() {
       
       const { data, error } = await supabase
         .from('jobs')
-        .select('*')
+        .select('id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, description, role, related_roles, ai_enhanced_roles, skills_required, ai_enhanced_skills, experience_level')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
-        .range(0, 99); // ✅ Limit to 100 jobs
+        .range(0, 99);
 
       if (error) throw error;
 
@@ -939,37 +992,11 @@ export default function JobList() {
         if (!locationMatch) return false;
       }
       
-      // Country filter with aliases for common abbreviations
+      // ✅ Country filter — uses the dedicated country column (set server-side on country pages,
+      // or via geo-detection on /jobs). Simple string match, no JSON parsing needed.
       if (filters.country) {
-        const jobLoc = job.location;
-        let countryMatch = false;
-        let isRemote = false;
-        
-        // Map filter country to possible variations in database
-        const countryAliases: Record<string, string[]> = {
-          'United States': ['united states', 'usa', 'us', 'america', 'united states of america'],
-          'United Kingdom': ['united kingdom', 'uk', 'u.k.', 'britain', 'great britain'],
-          'United Arab Emirates': ['united arab emirates', 'uae', 'dubai', 'emirates'],
-          'South Korea': ['south korea', 'korea', 'republic of korea'],
-          'New Zealand': ['new zealand', 'nz'],
-          'South Africa': ['south africa', 'sa', 'rsa'],
-        };
-        
-        const filterCountryLower = filters.country.toLowerCase();
-        const aliases = countryAliases[filters.country] || [filterCountryLower];
-        
-        if (typeof jobLoc === 'string') {
-          const jobLocLower = jobLoc.toLowerCase();
-          countryMatch = aliases.some(alias => jobLocLower.includes(alias));
-          isRemote = jobLocLower.includes('remote');
-        } else if (jobLoc && typeof jobLoc === 'object') {
-          const loc = jobLoc as Record<string, unknown>;
-          const jobCountry = String(loc.country || '').toLowerCase();
-          countryMatch = aliases.some(alias => jobCountry.includes(alias));
-          isRemote = Boolean(loc.remote);
-        }
-        
-        if (!countryMatch && !isRemote) return false;
+        const jobCountry = String((job as any).country || '').toLowerCase();
+        if (!jobCountry || jobCountry !== filters.country.toLowerCase()) return false;
       }
       
       // Remote filter
@@ -1026,6 +1053,15 @@ export default function JobList() {
           jobSector.includes(sector.toLowerCase()) || sector.toLowerCase().includes(jobSector)
         );
         if (!sectorMatch) return false;
+      }
+      
+      // Role category filter (for remote categories)
+      if (filters.roleCategory) {
+        const jobRoleCat = job.role_category?.toLowerCase() || '';
+        if (!jobRoleCat.includes(filters.roleCategory.toLowerCase()) && 
+            !filters.roleCategory.toLowerCase().includes(jobRoleCat)) {
+          return false;
+        }
       }
       
       return true;
@@ -1116,6 +1152,7 @@ export default function JobList() {
       salaryRange: undefined,
       remote: false,
       country: '',
+      roleCategory: '',
     };
     setFilters(clearedFilters);
     setSearchQuery('');

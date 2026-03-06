@@ -1,15 +1,25 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { mapJobToSchema } from '@/lib/mapJobToSchema';
 import JobClient from './JobClient';
 import { Metadata } from 'next';
 
-export const revalidate = 3600; // 1 hour - individual jobs rarely change
+export const revalidate = 3600;
+
+const KNOWN_COUNTRIES = [
+  'us', 'united-states', 'canada', 'australia', 'new-zealand',
+  'france', 'spain', 'germany', 'united-kingdom', 'uk', 'uae', 'emirates'
+];
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const supabase = createClient();
-  
   const { slug } = params;
+  
+  // Redirect known countries to proper country page
+  if (KNOWN_COUNTRIES.includes(slug)) {
+    redirect(`/jobs/${slug}`);
+  }
+  
+  const supabase = createClient();
   
   // Find job by slug
   const { data: job, error } = await supabase

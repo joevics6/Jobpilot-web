@@ -8,7 +8,23 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
  * Place at: app/sitemap-locations/route.ts
  */
 export async function GET() {
-  const routes: MetadataRoute.Sitemap = [];
+  // ✅ Static country folder pages — add new countries here as you create their folders
+  const countryRoutes: MetadataRoute.Sitemap = [
+    { url: `${siteUrl}/jobs/us`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/remote`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/uk`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/uae`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/united-kingdom`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/germany`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/spain`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/france`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/new-zealand`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/australia`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/canada`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/jobs/usa`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+  ];
+
+  const routes: MetadataRoute.Sitemap = [...countryRoutes];
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

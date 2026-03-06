@@ -196,9 +196,6 @@ export default function NYSCFinderPage() {
       setTotalJobs(total);
       setTotalPages(total > 0 ? Math.ceil(total / JOBS_PER_PAGE) : 1);
 
-      if (searchQuery.trim()) {
-        saveSearchHistory(searchQuery.trim(), total);
-      }
 
       let query = supabase
         .from('jobs')

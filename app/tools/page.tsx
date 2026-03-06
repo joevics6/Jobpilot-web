@@ -105,7 +105,7 @@ export default function ToolsPage() {
         },
         {
           id: 'quiz',
-          title: 'Company Quiz',
+          title: 'Recruitment Assessment Practice Tests',
           description: 'Practice aptitude tests from top companies',
           icon: Brain,
           color: '#EC4899',

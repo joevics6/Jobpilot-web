@@ -22,9 +22,11 @@ const STORAGE_KEYS = {
 interface CategoryJobListProps {
   category: string;
   location: string | null;
+  jobType?: string;       // e.g. "Remote" — when set, filters by job_type + role_category instead of category
+  roleCategory?: string;  // e.g. "Marketing" — used with jobType for remote category pages
 }
 
-export default function CategoryJobList({ category, location }: CategoryJobListProps) {
+export default function CategoryJobList({ category, location, jobType, roleCategory }: CategoryJobListProps) {
   const [user, setUser] = useState<any>(null);
   const [jobs, setJobs] = useState<JobUI[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export default function CategoryJobList({ category, location }: CategoryJobListP
 
   useEffect(() => {
     fetchCategoryJobs();
-  }, [category, location, user, userOnboardingData]);
+  }, [category, location, jobType, roleCategory, user, userOnboardingData]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -113,17 +115,25 @@ export default function CategoryJobList({ category, location }: CategoryJobListP
       // Build query
       let query = supabase
         .from('jobs')
-        .select('*')
+        .select('id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, role, related_roles, ai_enhanced_roles, skills_required, ai_enhanced_skills, experience_level')
         .eq('status', 'active')
-        .eq('category', category)
         .gte('created_at', thirtyDaysAgoISO)
         .order('created_at', { ascending: false })
-        .limit(50); // Limit to 50 jobs as per requirement
+        .limit(50);
 
-      // Add location filter if specified
-      if (location) {
-        // Filter by state in location JSON column
-        query = query.eq('location->>state', location);
+      if (jobType) {
+        // Remote category pages: filter by job_type + role_category (precise)
+        query = query.eq('job_type', jobType);
+        if (roleCategory) {
+          query = query.eq('role_category', roleCategory);
+        }
+      } else {
+        // Nigerian category pages: filter by broad category column
+        query = query.eq('category', category);
+        // Add location filter if specified
+        if (location) {
+          query = query.eq('location->>state', location);
+        }
       }
 
       const { data, error } = await query;

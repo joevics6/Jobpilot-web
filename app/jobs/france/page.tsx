@@ -7,25 +7,29 @@ export const revalidate = 1800;
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 
 export const metadata: Metadata = {
-  title: 'Remote Jobs - Work From Anywhere | JobMeter',
-  description: 'Browse the latest remote job opportunities. Find full-time, part-time, and contract remote jobs across all industries. Apply to top companies hiring remotely today.',
+  title: 'Jobs in France - Find Employment Opportunities | JobMeter',
+  description: 'Browse latest job openings in France. Find full-time, part-time, and remote jobs across all industries. Apply to top French companies today.',
   alternates: {
-    canonical: `${siteUrl}/jobs/remote`,
+    canonical: `${siteUrl}/jobs/france`,
+    languages: {
+      'fr': `${siteUrl}/jobs/france`,
+      'en': `${siteUrl}/jobs/france`,
+    },
   },
 };
 
-export default function RemoteJobsPage() {
+export default function FranceJobsPage() {
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
     { name: 'Jobs', url: `${siteUrl}/jobs` },
-    { name: 'Remote', url: `${siteUrl}/jobs/remote` },
+    { name: 'France', url: `${siteUrl}/jobs/france` },
   ];
 
   return (
     <>
       <BreadcrumbListSchema items={breadcrumbItems} />
       <div>
-        <JobList initialJobType="Remote" />
+        <JobList initialCountry="France" />
       </div>
     </>
   );

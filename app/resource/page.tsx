@@ -110,7 +110,7 @@ export default function ResourcePage() {
         },
         {
           id: 'quiz',
-          title: 'Quiz Platform',
+          title: 'Recruitment Assessment Practice Tests',
           description: 'Practice aptitude tests and theory questions',
           icon: ClipboardList,
           color: '#2563EB',

@@ -17,6 +17,25 @@ export async function GET() {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+    // ✅ Remote category pages — dynamic from remote_categories table
+    const { data: remoteCategories, error: remoteError } = await supabase
+      .from('remote_categories')
+      .select('slug, updated_at')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (!remoteError && remoteCategories) {
+      remoteCategories.forEach((cat) => {
+        routes.push({
+          url: `${siteUrl}/jobs/remote/${cat.slug}`,
+          lastModified: cat.updated_at ? new Date(cat.updated_at) : new Date(),
+          changeFrequency: 'daily' as const,
+          priority: 0.8,
+        });
+      });
+    }
+
+    // Existing Nigerian category pages from DB
     const { data: categoryPages, error } = await supabase
       .from('category_pages')
       .select('slug, updated_at, location, job_count')
@@ -37,7 +56,7 @@ export async function GET() {
           priority: page.job_count > 20 ? 0.9 : 0.7,
         });
       });
-      console.log(`📄 Category sitemap: ${routes.length} pages`);
+      console.log(`📄 Category sitemap: ${routes.length} pages total (${REMOTE_CATEGORY_ROUTES.length} remote + ${categoryPages.length} Nigerian)`);
     }
   } catch (error) {
     console.error('Error generating category sitemap:', error);
