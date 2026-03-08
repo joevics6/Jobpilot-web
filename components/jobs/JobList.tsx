@@ -651,8 +651,7 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
         const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
         const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
         
-        if (diffInHours <= 1) return 'Just now';
-        if (diffInHours < 24) return `${diffInHours}h ago`;
+        if (diffInHours < 24) return 'Today';
         if (diffInDays === 1) return '1 day ago';
         if (diffInDays < 7) return `${diffInDays} days ago`;
         if (diffInDays < 30) {
@@ -754,14 +753,13 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, description, role, related_roles, ai_enhanced_roles, skills_required, ai_enhanced_skills, experience_level')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .range(0, 99);
+      const params = new URLSearchParams();
+      params.set('from', '0');
+      params.set('to', '99');
 
-      if (error) throw error;
+      const res = await fetch(`/api/jobs?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch jobs');
+      const { jobs: data } = await res.json();
 
       console.log(`Fetched ${data?.length || 0} latest active jobs`);
 

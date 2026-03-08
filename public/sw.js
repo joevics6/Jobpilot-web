@@ -1,5 +1,5 @@
-const CACHE_NAME = 'jobmeter-v1';
-const RUNTIME_CACHE = 'jobmeter-runtime-v1';
+const CACHE_NAME = 'jobmeter-v2';
+const RUNTIME_CACHE = 'jobmeter-runtime-v2';
 
 // Cache only essential static assets
 const STATIC_CACHE_URLS = [
@@ -46,10 +46,22 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome extensions and non-http(s) requests
   if (!event.request.url.startsWith('http')) return;
 
+  const url = new URL(event.request.url);
+
+  // Let these go straight to network — no SW caching
+  const isApiCall = url.pathname.startsWith('/api/');
+  const isSupabase = url.hostname.includes('supabase');
+  const isAuthCall = url.pathname.includes('/auth/');
+  const isThirdParty = url.hostname !== self.location.hostname;
+
+  if (isApiCall || isSupabase || isAuthCall || isThirdParty) {
+    return; // fall through to network directly
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Only cache successful responses
+        // Only cache successful same-origin non-API responses
         if (response.status === 200) {
           const responseClone = response.clone();
           caches.open(RUNTIME_CACHE).then((cache) => {
