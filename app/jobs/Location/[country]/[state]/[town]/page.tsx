@@ -2,6 +2,7 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { MapPin, Briefcase, Building2, TrendingUp, DollarSign, HelpCircle, ExternalLink, Wifi, Car, BookOpen } from 'lucide-react';
 import JobList from '@/components/jobs/JobList';
@@ -77,15 +78,16 @@ export default async function TownJobsPage({ params }: { params: PageParams }) {
   const page = await getTownPage(params.country, params.state, params.town);
   if (!page) notFound();
 
-  // Fetch active town slugs so we only link to pages that actually exist
-  const supabase = getSupabase();
-  const { data: activeTownRows } = await supabase
-    .from('location_town_pages')
-    .select('slug, state_slug, country_slug')
-    .eq('is_active', true);
-  const activeTownSlugs = new Set(
-    (activeTownRows || []).map(r => `${r.country_slug}/${r.state_slug}/${r.slug}`)
-  );
+  // Fetch active town slugs so we only link to pages that actually exist — cached 1hr
+  const getActiveTownSlugs = unstable_cache(async () => {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from('location_town_pages')
+      .select('slug, state_slug, country_slug')
+      .eq('is_active', true);
+    return (data || []).map(r => `${r.country_slug}/${r.state_slug}/${r.slug}`);
+  }, ['active-town-slugs'], { revalidate: 3600 });
+  const activeTownSlugs = new Set(await getActiveTownSlugs());
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
@@ -95,7 +97,7 @@ export default async function TownJobsPage({ params }: { params: PageParams }) {
     { name: page.town, url: `${siteUrl}/jobs/Location/${page.full_path}` },
   ];
 
-  const relatedTowns: Array<{ name: string; country: string; state_slug: string }> = page.related_towns || [];
+  const relatedTowns: Array<{ name: string; slug: string; state_slug: string }> = page.related_towns || [];
   const topRoles: Array<{ role: string; avg_salary: string; demand: string }> = page.top_roles || [];
   const majorEmployers: Array<{ name: string; sector: string }> = page.major_employers || [];
   const faqs: Array<{ question: string; answer: string }> = page.faqs || [];

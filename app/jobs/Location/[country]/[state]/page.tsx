@@ -2,6 +2,7 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { MapPin, Briefcase, Building2, TrendingUp, DollarSign, HelpCircle, ExternalLink, ChevronRight, BookOpen } from 'lucide-react';
 import JobList from '@/components/jobs/JobList';
@@ -74,15 +75,16 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
   const page = await getStatePage(params.country, params.state);
   if (!page) notFound();
 
-  // Fetch active state slugs so we only link to pages that actually exist
-  const supabase = getSupabase();
-  const { data: activeStateRows } = await supabase
-    .from('location_state_pages')
-    .select('slug, country_slug')
-    .eq('is_active', true);
-  const activeStateSlugs = new Set(
-    (activeStateRows || []).map(r => `${r.country_slug}/${r.slug}`)
-  );
+  // Fetch active state slugs so we only link to pages that actually exist — cached 1hr
+  const getActiveStateSlugs = unstable_cache(async () => {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from('location_state_pages')
+      .select('slug, country_slug')
+      .eq('is_active', true);
+    return (data || []).map(r => `${r.country_slug}/${r.slug}`);
+  }, ['active-state-slugs'], { revalidate: 3600 });
+  const activeStateSlugs = new Set(await getActiveStateSlugs());
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
