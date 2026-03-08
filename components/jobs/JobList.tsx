@@ -243,11 +243,11 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
       }
       
       if (!hasVisitedBefore) {
-        // First visit - auto-detect and apply
+        // First visit - auto-detect using Vercel geo headers (reliable, no external API)
         try {
-          const response = await fetch('https://ipapi.co/json/');
+          const response = await fetch('/api/geo');
           const data = await response.json();
-          const country = data.country_name || 'Nigeria';
+          const country = data.country || 'Nigeria';
           setDetectedCountry(country);
           setFilters(prev => ({ ...prev, country }));
           localStorage.setItem('user_country', country);

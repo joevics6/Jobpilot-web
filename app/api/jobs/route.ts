@@ -3,7 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 
 const FIELDS = 'id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, description, job_type';
-const REVALIDATE_SECONDS = 900; // 15 minutes — fresh enough for multiple daily additions
+const REVALIDATE_SECONDS = 1800; // 30 minutes
 
 function getSupabase() {
   return createClient(
@@ -36,8 +36,10 @@ function makeCachedFetcher(country: string, jobType: string, postedToday: boolea
         .range(0, 1999); // up to 2000 jobs
 
       if (country) {
+        // Specific country page: show that country's jobs + Global jobs
         query = query.or(`country.cs.{"${country}"},country.cs.{"Global"}`);
       }
+      // No country filter = fetch ALL jobs (used by /jobs global page)
 
       if (jobType) {
         query = query.eq('job_type', jobType);
