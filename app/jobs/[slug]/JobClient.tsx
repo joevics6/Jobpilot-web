@@ -51,6 +51,10 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
   const [similarJobs, setSimilarJobs] = useState<any[]>(relatedJobs || []);
   const [companyJobs, setCompanyJobs] = useState<any[]>([]);
   const [userCountry, setUserCountry] = useState<string | null>(null);
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const [showEmail, setShowEmail] = useState(false);
+  const [showPhone, setShowPhone] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
 
   const handleCopy = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
@@ -130,6 +134,21 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
     if (!relatedJobs || relatedJobs.length === 0) {
       loadSimilarJobs();
     }
+  }, []);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY < lastScrollY || currentScrollY < 10) {
+        setHeaderVisible(true);
+      } else {
+        setHeaderVisible(false);
+      }
+      lastScrollY = currentScrollY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const checkAuth = async () => {
@@ -390,71 +409,96 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
   return (
     <>
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <button 
+        {/* Sticky 2-row header — hides on scroll down, reappears on scroll up */}
+        <div
+          className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm transition-transform duration-300"
+          style={{ transform: headerVisible ? 'translateY(0)' : 'translateY(-100%)' }}
+        >
+          {/* Row 1 — Breadcrumb */}
+          <div className="border-b border-gray-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+              <nav className="flex items-center gap-1.5 text-xs text-gray-500 flex-wrap" aria-label="Breadcrumb">
+                <a href="/" className="flex items-center gap-1 hover:text-gray-700 transition-colors">
+                  <Home size={11} />
+                  <span>Home</span>
+                </a>
+                <span className="text-gray-300">/</span>
+                <a href="/jobs" className="hover:text-gray-700 transition-colors">Jobs</a>
+                {breadcrumbCountry && (
+                  <>
+                    <span className="text-gray-300">/</span>
+                    <a
+                      href={`/jobs/${breadcrumbCountry.slug}`}
+                      className="hover:text-gray-700 transition-colors capitalize"
+                    >
+                      {breadcrumbCountry.name}
+                    </a>
+                  </>
+                )}
+                <span className="text-gray-300">/</span>
+                <span className="text-gray-700 truncate max-w-[200px] sm:max-w-xs">{job.title}</span>
+              </nav>
+            </div>
+          </div>
+
+          {/* Row 2 — All Jobs + actions */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <button
                 onClick={() => router.push('/jobs')}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
                 style={{ color: theme.colors.primary.DEFAULT }}
               >
-                <ArrowLeft size={18} />
-<span className="hidden sm:inline">All Jobs</span>
-                <span className="sm:hidden">All Jobs</span>
+                <ArrowLeft size={16} />
+                <span>All Jobs</span>
               </button>
-              
-               <form method="GET" action="/jobs" className="flex items-center gap-0">
-                 <div className="relative">
-                   <input
-                     type="text"
-                     name="search"
-                     placeholder="Enter a role"
-                     className="pl-3 pr-3 py-2 rounded-l-lg border border-r-0 border-gray-200 text-sm w-32 md:w-48 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-0"
-                     style={{ '--tw-ring-color': theme.colors.primary.DEFAULT } as React.CSSProperties}
-                   />
-                 </div>
+
+              <div className="flex items-center gap-2">
+                {/* Save */}
                 <button
-                  type="submit"
-                  className="px-4 py-2 rounded-r-lg text-sm font-medium text-white transition-colors hover:opacity-90"
+                  onClick={handleSave}
+                  title={saved ? 'Saved' : 'Save job'}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                    saved
+                      ? 'bg-gray-100 border-gray-200 text-gray-700'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {saved ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+                  <span className="hidden sm:inline">{saved ? 'Saved' : 'Save'}</span>
+                </button>
+
+                {/* Share */}
+                <button
+                  onClick={handleShare}
+                  title="Share job"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border bg-white border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <Share2 size={15} />
+                  <span className="hidden sm:inline">Share</span>
+                </button>
+
+                {/* Apply Now */}
+                <button
+                  onClick={() => {
+                    const section = document.getElementById('how-to-apply');
+                    if (section) {
+                      const offset = section.getBoundingClientRect().top + window.pageYOffset - 80;
+                      window.scrollTo({ top: offset, behavior: 'smooth' });
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-colors hover:opacity-90"
                   style={{ backgroundColor: theme.colors.primary.DEFAULT }}
                 >
-                  Search
+                  Apply Now
                 </button>
-              </form>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Breadcrumb */}
-        <div className="bg-white border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <nav className="flex items-center gap-1.5 text-xs text-gray-500 flex-wrap" aria-label="Breadcrumb">
-              <a href="/" className="flex items-center gap-1 hover:text-gray-700 transition-colors">
-                <Home size={11} />
-                <span>Home</span>
-              </a>
-              <span className="text-gray-300">/</span>
-              <a href="/jobs" className="hover:text-gray-700 transition-colors">Jobs</a>
-              {breadcrumbCountry && (
-                <>
-                  <span className="text-gray-300">/</span>
-                  <a
-                    href={`/jobs/${breadcrumbCountry.slug}`}
-                    className="hover:text-gray-700 transition-colors capitalize"
-                  >
-                    {breadcrumbCountry.name}
-                  </a>
-                </>
-              )}
-              <span className="text-gray-300">/</span>
-              <span className="text-gray-700 truncate max-w-[200px] sm:max-w-xs">{job.title}</span>
-            </nav>
-          </div>
-        </div>
-
         {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Main Job Details */}
             <div className="lg:col-span-2 space-y-6">
@@ -683,7 +727,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                         </div>
                       )}
 
-                      {job.deadline && (
+                      {job.deadline && !(job.status === 'expired' || new Date(job.deadline) < new Date()) && (
                         <div className="flex items-center gap-3">
                           <Calendar size={20} className="text-gray-400 flex-shrink-0" />
                           <div>
@@ -830,86 +874,123 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                     </p>
                   )}
                   
-                  <div className="space-y-6">
+                  <div className="space-y-3">
+                    {/* Phone — reveal button */}
                     {(job.application?.phone || job.application_phone) && (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                          <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                          </svg>
-                          <span className="text-sm text-gray-700 flex-1 font-medium">
-                            {(job.application?.phone || job.application_phone || '').replace('tel:', '')}
+                      <div>
+                        <button
+                          onClick={() => setShowPhone(v => !v)}
+                          className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-xl border-2 font-semibold text-sm transition-colors bg-green-50 border-green-300 text-green-800 hover:bg-green-100"
+                        >
+                          <span className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                            </svg>
+                            Apply via WhatsApp / Phone
                           </span>
-                        </div>
-                        <div className="flex items-center gap-3 pl-4">
-                          <a 
-                            href={`https://wa.me/${(job.application?.phone || job.application_phone || '').replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
-                          >
-                            WhatsApp
-                          </a>
-                          <button
-                            onClick={() => handleCopy((job.application?.phone || job.application_phone || '').replace('tel:', ''), 'Phone number')}
-                            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                          >
-                            {copied === 'Phone number' ? 'Copied!' : 'Copy'}
-                          </button>
-                        </div>
+                          <span className="text-green-600 text-xs font-medium">{showPhone ? 'Hide ▲' : 'Tap to reveal ▼'}</span>
+                        </button>
+                        {showPhone && (
+                          <div className="mt-2 p-4 bg-green-50 rounded-xl border border-green-200 space-y-3">
+                            <p className="text-sm font-medium text-gray-800 break-all">
+                              {(job.application?.phone || job.application_phone || '').replace('tel:', '')}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`https://wa.me/${(job.application?.phone || job.application_phone || '').replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
+                              >
+                                WhatsApp
+                              </a>
+                              <button
+                                onClick={() => handleCopy((job.application?.phone || job.application_phone || '').replace('tel:', ''), 'Phone number')}
+                                className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                              >
+                                {copied === 'Phone number' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
-                    
+
+                    {/* Email — reveal button */}
                     {(job.application?.email || job.application_email) && (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-4 rounded-lg border border-gray-200" style={{ backgroundColor: `${theme.colors.primary.DEFAULT}05` }}>
-                          <Mail size={20} className="flex-shrink-0" style={{ color: theme.colors.primary.DEFAULT }} />
-                          <span className="text-sm text-gray-700 flex-1 break-all font-medium">
-                            {(job.application?.email || job.application_email || '').replace('mailto:', '')}
+                      <div>
+                        <button
+                          onClick={() => setShowEmail(v => !v)}
+                          className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-xl border-2 font-semibold text-sm transition-colors"
+                          style={{ backgroundColor: `${theme.colors.primary.DEFAULT}10`, borderColor: `${theme.colors.primary.DEFAULT}50`, color: theme.colors.primary.DEFAULT }}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Mail size={16} />
+                            Apply via Email
                           </span>
-                        </div>
-                        <div className="flex items-center gap-3 pl-4">
-                          <a 
-                            href={`mailto:${(job.application?.email || job.application_email || '').replace('mailto:', '')}?subject=${encodeURIComponent(job.subject || `${job.title || 'Job'} Application`)}`}
-                            className="px-4 py-2 text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium"
-                            style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-                          >
-                            Email
-                          </a>
-                          <button
-                            onClick={() => handleCopy((job.application?.email || job.application_email || '').replace('mailto:', ''), 'Email')}
-                            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                          >
-                            {copied === 'Email' ? 'Copied!' : 'Copy'}
-                          </button>
-                        </div>
+                          <span className="text-xs font-medium opacity-70">{showEmail ? 'Hide ▲' : 'Tap to reveal ▼'}</span>
+                        </button>
+                        {showEmail && (
+                          <div className="mt-2 p-4 rounded-xl border border-gray-200 space-y-3" style={{ backgroundColor: `${theme.colors.primary.DEFAULT}05` }}>
+                            <p className="text-sm font-medium text-gray-800 break-all">
+                              {(job.application?.email || job.application_email || '').replace('mailto:', '')}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`mailto:${(job.application?.email || job.application_email || '').replace('mailto:', '')}?subject=${encodeURIComponent(job.subject || `${job.title || 'Job'} Application`)}`}
+                                className="px-4 py-2 text-white text-sm rounded-lg hover:opacity-90 transition-opacity font-medium"
+                                style={{ backgroundColor: theme.colors.primary.DEFAULT }}
+                              >
+                                Open Email
+                              </a>
+                              <button
+                                onClick={() => handleCopy((job.application?.email || job.application_email || '').replace('mailto:', ''), 'Email')}
+                                className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                              >
+                                {copied === 'Email' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
-                    
+
+                    {/* URL — reveal button */}
                     {(job.application?.link || job.application?.url || job.application_url) && (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                          <ExternalLink size={20} className="text-purple-600 flex-shrink-0" />
-                          <span className="text-sm text-gray-700 flex-1 break-all font-medium">
-                            {job.application?.link || job.application?.url || job.application_url}
+                      <div>
+                        <button
+                          onClick={() => setShowUrl(v => !v)}
+                          className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-xl border-2 font-semibold text-sm transition-colors bg-purple-50 border-purple-300 text-purple-800 hover:bg-purple-100"
+                        >
+                          <span className="flex items-center gap-2">
+                            <ExternalLink size={16} />
+                            Apply via Link
                           </span>
-                        </div>
-                        <div className="flex items-center gap-3 pl-4">
-                          <a 
-                            href={job.application?.link || job.application?.url || job.application_url || ''}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                          >
-                            Apply Now
-                          </a>
-                          <button
-                            onClick={() => handleCopy(job.application?.link || job.application?.url || job.application_url || '', 'URL')}
-                            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                          >
-                            {copied === 'URL' ? 'Copied!' : 'Copy'}
-                          </button>
-                        </div>
+                          <span className="text-purple-600 text-xs font-medium">{showUrl ? 'Hide ▲' : 'Tap to reveal ▼'}</span>
+                        </button>
+                        {showUrl && (
+                          <div className="mt-2 p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
+                            <p className="text-sm font-medium text-gray-800 break-all">
+                              {job.application?.link || job.application?.url || job.application_url}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={job.application?.link || job.application?.url || job.application_url || ''}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                              >
+                                Open Link
+                              </a>
+                              <button
+                                onClick={() => handleCopy(job.application?.link || job.application?.url || job.application_url || '', 'URL')}
+                                className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                              >
+                                {copied === 'URL' ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1153,114 +1234,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
         </div>
 
         {/* Bottom Action Bar - Mobile Fixed */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg lg:hidden">
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSave}
-                className={`flex-1 px-2 py-3 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-1 ${
-                  saved ? 'bg-gray-100 text-gray-700' : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {saved ? (
-                  <>
-                    <BookmarkCheck size={16} />
-                    <span className="hidden xs:inline">Saved</span>
-                  </>
-                ) : (
-                  <>
-                    <Bookmark size={16} />
-                    <span className="hidden xs:inline">Save</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={handleShare}
-                className="px-2 py-3 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
-              >
-                <Share2 size={16} />
-                <span className="hidden xs:inline">Share</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  const howToApplySection = document.getElementById('how-to-apply');
-                  if (howToApplySection) {
-                    const headerHeight = 80; // Approximate header height
-                    const elementPosition = howToApplySection.getBoundingClientRect().top;
-                    const offsetPosition = elementPosition + window.pageYOffset - headerHeight;
-                    
-                    window.scrollTo({
-                      top: offsetPosition,
-                      behavior: 'smooth'
-                    });
-                  }
-                }}
-                className="flex-1 px-2 py-3 rounded-xl font-semibold text-sm text-white transition-colors hover:opacity-90"
-                style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-              >
-                Apply Now
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Desktop Action Bar */}
-        <div className="hidden lg:block fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSave}
-                  className={`px-3 py-3 rounded-xl font-semibold text-sm transition-colors flex items-center gap-2 ${
-                    saved ? 'bg-gray-100 text-gray-700' : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {saved ? (
-                    <>
-                      <BookmarkCheck size={16} />
-                      Saved
-                    </>
-                  ) : (
-                    <>
-                      <Bookmark size={16} />
-                      Save Job
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={handleShare}
-                  className="px-3 py-3 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
-                >
-                  <Share2 size={16} />
-                  Share this job
-                </button>
-              </div>
-
-              <button
-                onClick={() => {
-                  const howToApplySection = document.getElementById('how-to-apply');
-                  if (howToApplySection) {
-                    const headerHeight = 80; // Approximate header height
-                    const elementPosition = howToApplySection.getBoundingClientRect().top;
-                    const offsetPosition = elementPosition + window.pageYOffset - headerHeight;
-                    
-                    window.scrollTo({
-                      top: offsetPosition,
-                      behavior: 'smooth'
-                    });
-                  }
-                }}
-                className="px-6 py-3 rounded-xl font-semibold text-sm text-white transition-colors hover:opacity-90"
-                style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-              >
-                Apply for this Position
-              </button>
-            </div>
-          </div>
-        </div>
 
 
       </div>
