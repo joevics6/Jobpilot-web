@@ -1,3 +1,5 @@
+# 📁 public/robots.txt
+
 User-agent: *
 Allow: /
 Disallow: /api/
@@ -7,8 +9,11 @@ Disallow: /onboarding/
 Disallow: /settings/
 Disallow: /saved/
 Disallow: /cv/view/
+Disallow: /offline.html
+Disallow: /_next/
+Crawl-delay: 10
 
-# Block known aggressive job scrapers
+# ── Job scrapers ─────────────────────────────────────────────────────────────
 User-agent: JobBot
 Disallow: /
 
@@ -27,6 +32,7 @@ Disallow: /
 User-agent: ZipRecruiter
 Disallow: /
 
+# ── Generic script scrapers ──────────────────────────────────────────────────
 User-agent: Python-urllib
 Disallow: /
 
@@ -42,5 +48,35 @@ Disallow: /
 User-agent: node-fetch
 Disallow: /
 
-# Sitemap
-Sitemap: https://www.jobmeter.app/sitemap.xml
+# ── Aggressive SEO crawlers (responsible for bulk of your Vercel traffic) ────
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+Sitemap: https://www.jobmeter.ng/sitemap.xml
