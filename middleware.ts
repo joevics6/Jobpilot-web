@@ -1,3 +1,4 @@
+// 📁 middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { Redis } from '@upstash/redis';
@@ -10,10 +11,15 @@ const redis = new Redis({
 // Countries blocked from /jobs/* — no real users, only bots
 const BLOCKED_COUNTRIES = new Set(['SG']);
 
-// Rate limit: 30 req/min, then 5 min ban
-const RATE_LIMIT   = 30;
-const WINDOW_MS    = 60;   // seconds
-const BAN_DURATION = 300;  // seconds
+// ── Rate limit config ────────────────────────────────────────────────────────
+// Real users browsing a page fire 30-60 requests at once (JS, CSS, API, icons).
+// Set limit high enough for normal use, tight enough to catch actual abuse.
+const RATE_LIMIT   = 200;  // requests per window (was 30 — far too low)
+const WINDOW_MS    = 60;   // 1 minute window
+const BAN_DURATION = 300;  // 5 min ban after exceeding limit
+
+// Only rate-limit these paths — skip static assets entirely at the matcher level
+const RATE_LIMITED_PATHS = ['/api/', '/tools/', '/jobs/', '/blog/', '/'];
 
 // Detect bots by user agent
 const BOT_PATTERNS = [
@@ -32,28 +38,29 @@ export async function middleware(request: NextRequest) {
     request.headers.get('x-real-ip') ||
     'unknown';
 
-  // ── 1. Skip static assets ──────────────────────────────────────────────
-  if (pathname.match(/\.(jpg|jpeg|png|gif|css|js|ico|svg|woff|woff2)$/)) {
+  // ── 1. Skip static assets ─────────────────────────────────────────────────
+  if (pathname.match(/\.(jpg|jpeg|png|gif|css|js|ico|svg|woff|woff2|webp|avif|json|txt|xml)$/)) {
     return NextResponse.next();
   }
 
-  // ── 2. Hard country block on /jobs/* ──────────────────────────────────
-  if (BLOCKED_COUNTRIES.has(country) && pathname.startsWith('/jobs/')) {
+  // ── 2. Hard country block — entire site ─────────────────────────────────
+  if (BLOCKED_COUNTRIES.has(country)) {
     console.log(`[middleware] Blocked country ${country}: ${ip} → ${pathname}`);
     return new NextResponse('Access restricted in your region.', { status: 403 });
   }
 
-  // ── 3. Bot user-agent block ────────────────────────────────────────────
+  // ── 3. Bot user-agent block ───────────────────────────────────────────────
   const isBot = BOT_PATTERNS.some(p => userAgent.includes(p));
   if (isBot && !userAgent.includes('googlebot') && !userAgent.includes('bingbot')) {
     console.log(`[middleware] Blocked bot: ${userAgent.substring(0, 50)} from ${ip}`);
     return new NextResponse('Forbidden - Bot detected', { status: 403 });
   }
 
-  // ── 4. Redis-backed rate limiting (works across all serverless instances) ──
-  // Skip rate limiting for unknown IPs to avoid Redis noise
-  if (ip === 'unknown') return NextResponse.next();
+  // ── 4. Only rate-limit meaningful paths, skip everything else ────────────
+  const shouldRateLimit = RATE_LIMITED_PATHS.some(p => pathname.startsWith(p));
+  if (!shouldRateLimit || ip === 'unknown') return NextResponse.next();
 
+  // ── 5. Redis-backed rate limiting ────────────────────────────────────────
   try {
     const banKey   = `ban:${ip}`;
     const countKey = `rate:${ip}`;
@@ -68,15 +75,13 @@ export async function middleware(request: NextRequest) {
       });
     }
 
-    // Increment request count with a 60s sliding window
+    // Increment request count within the window
     const count = await redis.incr(countKey);
     if (count === 1) {
-      // First request in this window — set expiry
       await redis.expire(countKey, WINDOW_MS);
     }
 
     if (count > RATE_LIMIT) {
-      // Ban this IP for 5 minutes
       await redis.set(banKey, '1', { ex: BAN_DURATION });
       await redis.del(countKey);
       console.log(`[middleware] Rate limit exceeded — banned ${ip} (${country}), count: ${count}, path: ${pathname}`);
@@ -90,7 +95,7 @@ export async function middleware(request: NextRequest) {
       });
     }
   } catch (err) {
-    // If Redis is down, fail open — don't block real users
+    // Redis down — fail open, never block real users
     console.error('[middleware] Redis error:', err);
   }
 
@@ -98,5 +103,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Exclude _next/static, _next/image, favicon entirely from middleware
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

@@ -409,9 +409,9 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
   return (
     <>
       <div className="min-h-screen bg-gray-50">
-        {/* Sticky 2-row header — hides on scroll down, reappears on scroll up */}
+        {/* Fixed 2-row header — hides on scroll down, reappears on scroll up */}
         <div
-          className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm transition-transform duration-300"
+          className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm transition-transform duration-300"
           style={{ transform: headerVisible ? 'translateY(0)' : 'translateY(-100%)' }}
         >
           {/* Row 1 — Breadcrumb */}
@@ -497,8 +497,8 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Main Content — pt offsets the fixed header (breadcrumb row ~36px + actions row ~52px) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-[96px]">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Main Job Details */}
             <div className="lg:col-span-2 space-y-6">
@@ -966,7 +966,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                             <ExternalLink size={16} />
                             Apply via Link
                           </span>
-                          <span className="text-purple-600 text-xs font-medium">{showUrl ? 'Hide ▲' : 'Tap to reveal ▼'}</span>
+                          <span className="text-purple-600 text-xs font-medium">{showUrl ? '▲' : '▼'}</span>
                         </button>
                         {showUrl && (
                           <div className="mt-2 p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">

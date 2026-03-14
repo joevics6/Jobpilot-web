@@ -908,14 +908,33 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
         if (!locationMatch) return false;
       }
       
-      // ✅ Country filter — country is text[]; Global jobs show on all country pages
+      // ✅ Country filter
+      // - On /jobs (no initialCountry): show all jobs including all remote/global
+      // - On /jobs/usa etc (initialCountry set): only show jobs explicitly listing that country
+      //   (remote "global" jobs are excluded — only remote jobs tagged with that country appear)
       if (filters.country) {
         const jobCountries: string[] = (job as any).country || [];
-        const match = jobCountries.some(c =>
-          c.toLowerCase() === filters.country.toLowerCase() ||
-          c.toLowerCase() === 'global'
-        );
-        if (!match) return false;
+        const isRemoteJob = (() => {
+          const loc = job.rawLocation || job.location;
+          if (typeof loc === 'string') return loc.toLowerCase().includes('remote');
+          if (loc && typeof loc === 'object') return Boolean((loc as Record<string, unknown>).remote);
+          return false;
+        })();
+
+        if (initialCountry) {
+          // Country-specific page: job must explicitly list this country (remote "global" jobs excluded)
+          const match = jobCountries.some(c =>
+            c.toLowerCase() === filters.country.toLowerCase()
+          );
+          if (!match) return false;
+        } else {
+          // /jobs page: show jobs matching country OR global jobs
+          const match = jobCountries.some(c =>
+            c.toLowerCase() === filters.country.toLowerCase() ||
+            c.toLowerCase() === 'global'
+          );
+          if (!match) return false;
+        }
       }
       
       // Remote filter
@@ -1174,18 +1193,48 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
                 }}
                 onFocus={() => setShowSuggestions(filters.search.length > 0)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                className="relative w-full pl-6 pr-14 py-5 rounded-xl border-2 outline-none focus:ring-0 focus:border-blue-500 transition-all text-base font-medium shadow-lg hover:shadow-xl z-10 placeholder:text-gray-400"
+                className="relative w-full pl-6 pr-24 py-5 rounded-xl border-2 outline-none focus:ring-0 focus:border-blue-500 transition-all text-base font-medium shadow-lg hover:shadow-xl z-10 placeholder:text-gray-400"
                 style={{
                   backgroundColor: theme.colors.background.DEFAULT,
                   borderColor: theme.colors.primary.DEFAULT,
                   color: theme.colors.text.primary,
                 }}
               />
-              <Search 
-                size={20} 
-                className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: theme.colors.text.secondary }}
-              />
+              {/* Right side: clear button or filter icon */}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+                {filters.search && (
+                  <button
+                    onClick={() => {
+                      setFilters(prev => ({ ...prev, search: '' }));
+                      setSearchQuery('');
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.delete('search');
+                      const queryString = params.toString();
+                      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+                      router.replace(newUrl);
+                    }}
+                    className="p-1.5 hover:bg-gray-100 rounded-full transition-all"
+                  >
+                    <X size={16} style={{ color: theme.colors.text.secondary }} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setFiltersOpen(true)}
+                  className="flex items-center justify-center w-9 h-9 rounded-lg transition-all hover:scale-105"
+                  style={{
+                    backgroundColor: hasActiveFilters() ? theme.colors.primary.DEFAULT : theme.colors.primary.DEFAULT + '15',
+                    color: hasActiveFilters() ? '#ffffff' : theme.colors.primary.DEFAULT,
+                  }}
+                  title="Filters"
+                >
+                  <SlidersHorizontal size={16} />
+                  {hasActiveFilters() && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 text-xs bg-red-500 text-white rounded-full flex items-center justify-center leading-none">
+                      {getActiveFilterCount()}
+                    </span>
+                  )}
+                </button>
+              </div>
               {/* Autocomplete Suggestions */}
               {showSuggestions && filteredSuggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-t-0 rounded-b-xl shadow-lg z-50 max-h-64 overflow-y-auto">
@@ -1209,48 +1258,13 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
                   ))}
                 </div>
               )}
-              {filters.search && (
-                <button
-                  onClick={() => {
-                    setFilters(prev => ({ ...prev, search: '' }));
-                    setSearchQuery('');
-                    
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.delete('search');
-                    const queryString = params.toString();
-                    const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-                    router.replace(newUrl);
-                  }}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 p-2.5 hover:bg-gray-100 rounded-full transition-all hover:scale-110 z-10"
-                  style={{ backgroundColor: theme.colors.primary.DEFAULT + '10' }}
-                >
-                  <X size={20} style={{ color: theme.colors.primary.DEFAULT }} />
-                </button>
-              )}
             </div>
 
-            {/* Filter and Sort - Same line on mobile */}
+            {/* Country Filter Row */}
             <div className="flex flex-row items-center gap-2">
-              {/* Advanced Filters Button */}
-              <button
-                onClick={() => setFiltersOpen(true)}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
-                style={{
-                  backgroundColor: hasActiveFilters() ? theme.colors.primary.DEFAULT + '10' : theme.colors.background.DEFAULT,
-                  borderColor: hasActiveFilters() ? theme.colors.primary.DEFAULT : theme.colors.border.DEFAULT,
-                }}
-              >
-                <SlidersHorizontal size={16} />
-                <span className="font-medium text-sm">Filters</span>
-                {hasActiveFilters() && (
-                  <span className="px-1.5 py-0.5 text-xs bg-blue-500 text-white rounded-full">
-                    {getActiveFilterCount()}
-                  </span>
-                )}
-              </button>
-
               {/* Country Quick Filter */}
-              <div className="flex-1 sm:flex-none relative">
+              <div className="flex-1 relative flex items-center gap-2">
+                <Globe size={16} className="shrink-0" style={{ color: theme.colors.text.secondary }} />
                 <select
                   value={filters.country || detectedCountry || ''}
                   onChange={(e) => {
@@ -1273,10 +1287,11 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
                     const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
                     router.replace(newUrl);
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer"
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer font-medium text-sm"
                   style={{
                     backgroundColor: filters.country ? theme.colors.primary.DEFAULT + '10' : theme.colors.background.DEFAULT,
                     borderColor: filters.country ? theme.colors.primary.DEFAULT : theme.colors.border.DEFAULT,
+                    color: theme.colors.text.primary,
                   }}
                 >
                   <option value="Global">Global</option>
@@ -1375,31 +1390,6 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
                   <option value="Zimbabwe">Zimbabwe</option>
                 </select>
               </div>
-
-              {/* Sort Button - Styled like Filter */}
-              <div className="flex-1 sm:flex-none relative">
-                <button
-                  onClick={() => {
-                    const newSortBy = sortBy === 'latest' ? 'salary' : sortBy === 'salary' ? 'match' : 'latest';
-                    setSortBy(newSortBy);
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set('sort', newSortBy);
-                    const queryString = params.toString();
-                    const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-                    router.replace(newUrl);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
-                  style={{
-                    backgroundColor: theme.colors.background.DEFAULT,
-                    borderColor: theme.colors.border.DEFAULT,
-                  }}
-                >
-                  <ArrowUpDown size={16} />
-                  <span className="font-medium text-sm">
-                    {sortBy === 'latest' ? 'Newest' : sortBy === 'salary' ? 'Salary' : 'Match'}
-                  </span>
-                </button>
-              </div>
             </div>
 
             {/* Loading Indicator - Visible without scrolling */}
@@ -1464,6 +1454,28 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
                     <RefreshCw size={14} className="animate-spin" />
                     {loadingMoreJobs ? 'Loading more...' : 'Refreshing...'}
                   </div>
+                )}
+                {/* Sort button */}
+                {activeTab === 'latest' && !latestJobsLoading && (
+                  <button
+                    onClick={() => {
+                      const newSortBy = sortBy === 'latest' ? 'salary' : sortBy === 'salary' ? 'match' : 'latest';
+                      setSortBy(newSortBy);
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set('sort', newSortBy);
+                      const queryString = params.toString();
+                      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+                      router.replace(newUrl);
+                    }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
+                    style={{
+                      backgroundColor: theme.colors.background.DEFAULT,
+                      borderColor: theme.colors.border.DEFAULT,
+                    }}
+                  >
+                    <ArrowUpDown size={12} />
+                    {sortBy === 'latest' ? 'Newest' : sortBy === 'salary' ? 'Salary' : 'Match'}
+                  </button>
                 )}
                 {/* Refresh button for Latest Jobs tab */}
                 {activeTab === 'latest' && !latestJobsLoading && !loadingMoreJobs && (

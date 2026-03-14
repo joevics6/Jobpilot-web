@@ -147,15 +147,23 @@ const MultiSelectDropdown = ({
                 }}
               >
                 {item}
-                <button
+                <span
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemove(item);
                   }}
-                  className="hover:text-red-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation();
+                      handleRemove(item);
+                    }
+                  }}
+                  className="hover:text-red-500 cursor-pointer"
                 >
                   <X size={12} />
-                </button>
+                </span>
               </span>
             ))
           )}
