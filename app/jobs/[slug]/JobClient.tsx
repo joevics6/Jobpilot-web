@@ -379,7 +379,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
         never overlaps the Apply button or bottom content.
         lg:pb-0 removes it on desktop where the anchor bar is hidden.
       */}
-      <div className="min-h-screen bg-gray-50 pb-[58px] lg:pb-0">
+      <div className="min-h-screen bg-gray-50">
 
         {/* Fixed 2-row header */}
         <div
@@ -659,7 +659,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
               </div>
 
               {/* ── AD #1: Responsive banner after job header ── */}
-              <div className="w-full rounded-lg">
+              <div className="w-full rounded-lg my-6">
                 <AdUnit key={AD_SLOTS.BANNER_TOP} slot={AD_SLOTS.BANNER_TOP} format="auto" />
               </div>
 
@@ -686,8 +686,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
               )}
 
               {/* ── AD #2: In-article after description ── */}
-              {/* minHeight ensures the fluid ad container is never 0px tall */}
-              <div className="w-full rounded-lg" style={{ minHeight: '100px' }}>
+              <div className="w-full rounded-lg my-6" style={{ minHeight: '100px' }}>
                 <AdUnit key={AD_SLOTS.IN_ARTICLE} slot={AD_SLOTS.IN_ARTICLE} format="fluid" layout="in-article" />
               </div>
 
@@ -1022,7 +1021,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
               )}
 
               {/* ── AD #3: Banner at the end of main content ── */}
-              <div className="w-full rounded-lg">
+              <div className="w-full rounded-lg my-6">
                 <AdUnit key={AD_SLOTS.BANNER_BOTTOM} slot={AD_SLOTS.BANNER_BOTTOM} format="auto" />
               </div>
 
@@ -1071,7 +1070,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
               )}
 
               {/* ── Sidebar AD ── */}
-              <div className="hidden lg:block w-full rounded-lg">
+              <div className="hidden lg:block w-full rounded-lg my-6">
                 <AdUnit key={AD_SLOTS.SIDEBAR} slot={AD_SLOTS.SIDEBAR} format="auto" />
               </div>
 
@@ -1130,40 +1129,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
         </div>
       </div>
 
-      {/*
-        ── Anchor Ad — mobile only, sticky bottom bar ──
-        Hard-clamped to 50px. The inner transform shifts the ad up by 50%
-        of its own rendered height so it stays centred inside the bar.
-        overflow:hidden on both layers kills any bleed.
-      */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100"
-        style={{ height: '50px', overflow: 'hidden' }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '50px',
-            overflow: 'hidden',
-          }}
-        >
-          <AdUnit
-            key={AD_SLOTS.ANCHOR_MOBILE}
-            slot={AD_SLOTS.ANCHOR_MOBILE}
-            format="auto"
-            style={{
-              display: 'block',
-              width: '100%',
-              height: '50px',
-              maxHeight: '50px',
-              overflow: 'hidden',
-            }}
-          />
-        </div>
-      </div>
+      {/* ANCHOR AD DISABLED — high CTR risk, re-enable after CTR normalises below 2% */}
 
       {/* Upgrade Modal */}
       {upgradeErrorType && (
