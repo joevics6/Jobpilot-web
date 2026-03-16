@@ -28,7 +28,7 @@ const STORAGE_KEYS = {
 
 // ✅ OPTIMIZATION: Pagination constants
 const JOBS_PER_PAGE_DISPLAY = 50; // Jobs per page for display
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+const CACHE_DURATION = 20 * 60 * 1000; // 20 minutes — expires before Redis (30 min)
 
 // ─── Ad slot IDs ───────────────────────────────────────────────────────────────
 
