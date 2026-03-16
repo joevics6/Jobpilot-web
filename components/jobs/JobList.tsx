@@ -627,14 +627,19 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
   const fetchLatestJobs = async () => {
     try {
       const sessionCached = sessionStorage.getItem('latest_jobs_cache');
-      if (sessionCached) {
-        try {
-          const parsedJobs = JSON.parse(sessionCached);
-          setLatestJobs(parsedJobs);
-          setLatestJobsLoading(false);
-          return;
-        } catch (e) {
-          // corrupt — fall through to fetch
+      const sessionTimestamp = sessionStorage.getItem('latest_jobs_cache_ts');
+
+      if (sessionCached && sessionTimestamp) {
+        const age = Date.now() - parseInt(sessionTimestamp, 10);
+        if (age < CACHE_DURATION) {
+          try {
+            const parsedJobs = JSON.parse(sessionCached);
+            setLatestJobs(parsedJobs);
+            setLatestJobsLoading(false);
+            return;
+          } catch (e) {
+            // corrupt — fall through to fetch
+          }
         }
       }
 
@@ -649,6 +654,7 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
 
       try {
         sessionStorage.setItem('latest_jobs_cache', JSON.stringify(allUiJobs));
+        sessionStorage.setItem('latest_jobs_cache_ts', Date.now().toString());
       } catch (cacheError) {
         console.error('Error saving to sessionStorage:', cacheError);
       }
@@ -733,8 +739,8 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
       localStorage.removeItem('jobs_cache');
       localStorage.removeItem('jobs_cache_timestamp');
       localStorage.removeItem('jobs_cache_user_id');
-      localStorage.removeItem('latest_jobs_cache');
-      localStorage.removeItem('latest_jobs_cache_timestamp');
+      sessionStorage.removeItem('latest_jobs_cache');
+      sessionStorage.removeItem('latest_jobs_cache_ts');
       if (user) {
         matchCacheService.clearMatchCache(user.id);
       }
