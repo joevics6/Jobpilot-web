@@ -11,17 +11,53 @@ const KNOWN_COUNTRIES = [
   'france', 'spain', 'germany', 'united-kingdom', 'uk', 'uae', 'emirates'
 ];
 
+// ─── Country abbreviation map for CTR ────────────────────────────────────────
+const COUNTRY_ABBREVIATIONS: Record<string, string> = {
+  'nigeria': 'NG',
+  'united states': 'U.S',
+  'usa': 'U.S',
+  'us': 'U.S',
+  'united kingdom': 'U.K',
+  'uk': 'U.K',
+  'united arab emirates': 'UAE',
+  'uae': 'UAE',
+  'canada': 'Canada',
+  'australia': 'Australia',
+  'germany': 'Germany',
+  'france': 'France',
+  'spain': 'Spain',
+  'new zealand': 'NZ',
+  'kenya': 'Kenya',
+  'ghana': 'Ghana',
+  'south africa': 'S.Africa',
+};
+
+function getCountryAbbreviation(job: any): string | null {
+  if (job.location?.remote) return 'Remote';
+  if (Array.isArray(job.country) && job.country.length > 0) {
+    const first = job.country.find((c: string) => c.toLowerCase() !== 'global');
+    if (first) return COUNTRY_ABBREVIATIONS[first.toLowerCase()] || first;
+  }
+  if (job.location && typeof job.location === 'object') {
+    const country = job.location.country;
+    if (country && country.toLowerCase() !== 'global') {
+      return COUNTRY_ABBREVIATIONS[country.toLowerCase()] || country;
+    }
+  }
+  return null;
+}
+
+// ─── generateMetadata ────────────────────────────────────────────────────────
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const { slug } = params;
   
-  // Redirect known countries to proper country page
   if (KNOWN_COUNTRIES.includes(slug)) {
     redirect(`/jobs/${slug}`);
   }
   
   const supabase = createClient();
   
-  // Find job by slug
   const { data: job, error } = await supabase
     .from('jobs')
     .select('*')
@@ -35,65 +71,63 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     };
   }
 
-  // NULL SAFE: Company name extraction
+  // NULL SAFE: Company name
   const companyName = typeof job.company === 'string' 
     ? job.company 
     : (job.company?.name || 'Company');
-  
-  // NULL SAFE: Location string extraction
+
+  const isConfidential = companyName === 'Confidential Employer';
+
+  // NULL SAFE: Location string
   const locationStr = typeof job.location === 'string'
     ? job.location
     : (job.location?.remote 
         ? 'Remote'
         : [job.location?.city, job.location?.state, job.location?.country].filter(Boolean).join(', ') || 'Not specified');
 
-  // NULL SAFE: Salary string extraction
+  // NULL SAFE: Salary string
   const getSalaryString = () => {
+    if (job.salary_abbreviation) return job.salary_abbreviation;
     if (job.salary) return job.salary;
-    
     if (job.salary_range && typeof job.salary_range === 'object') {
       const { min, max, currency } = job.salary_range;
-      
       if (currency && (min || max)) {
-        if (min && max) {
-          return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}`;
-        } else if (min) {
-          return `${currency} ${min.toLocaleString()}`;
-        } else if (max) {
-          return `${currency} ${max.toLocaleString()}`;
-        }
+        if (min && max) return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}`;
+        if (min) return `${currency} ${min.toLocaleString()}`;
+        if (max) return `${currency} ${max.toLocaleString()}`;
       }
     }
-    
     return null;
   };
 
   const salaryStr = getSalaryString();
-  // NULL SAFE: Job title - handle null title
   const jobTitle = job.title || 'Job Opportunity';
-  const title = `${jobTitle} at ${companyName}`;
-  
-  let description = `Apply for ${jobTitle} at ${companyName} in ${locationStr}`;
-  
-  if (salaryStr) {
-    description += `. Salary: ${salaryStr}`;
-  }
-  
-  description += '. Apply now on JobMeter.';
-  
-  if (description.length > 155) {
-    if (salaryStr) {
-      description = `Apply for ${jobTitle} at ${companyName} in ${locationStr}. Apply now on JobMeter.`;
-    }
-    
-    if (description.length > 155) {
-      const maxTitleLength = 155 - `Apply for  at ${companyName} in ${locationStr}. Apply now!`.length;
-      const truncatedTitle = jobTitle.length > maxTitleLength 
-        ? jobTitle.substring(0, maxTitleLength - 3) + '...'
-        : jobTitle;
-      description = `Apply for ${truncatedTitle} at ${companyName} in ${locationStr}. Apply now!`;
-    }
-  }
+  const countryAbbr = getCountryAbbreviation(job);
+
+  // ── Title: "Accountant at Dangote in NG | JobMeter"
+  // or for confidential: "Accountant in Lagos, NG | JobMeter"
+  let titleCore = isConfidential
+    ? countryAbbr ? `${jobTitle} in ${countryAbbr}` : jobTitle
+    : countryAbbr ? `${jobTitle} at ${companyName} in ${countryAbbr}` : `${jobTitle} at ${companyName}`;
+
+  // Keep title under 60 chars before " | JobMeter"
+  if (titleCore.length > 49) titleCore = titleCore.substring(0, 49).trim();
+  const title = `${titleCore} | JobMeter`;
+
+  // ── Description: keyword-rich with location and salary
+  let description = isConfidential
+    ? `Apply for ${jobTitle} in ${locationStr}`
+    : `Apply for ${jobTitle} at ${companyName} in ${locationStr}`;
+
+  if (salaryStr) description += `. Salary: ${salaryStr}`;
+  if (job.employment_type) description += `. ${job.employment_type}`;
+  if (job.sector) description += ` ${job.sector} role.`;
+  description += ' Apply now on JobMeter.';
+
+  if (description.length > 155) description = description.substring(0, 152).trim() + '...';
+
+  // ── robots: noindex only for status === 'expired' (Confidential Employer expired jobs)
+  const isNoIndex = job.status === 'expired';
 
   return {
     title,
@@ -103,7 +137,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       description,
       type: 'website',
       siteName: 'JobMeter',
-      // NULL SAFE: slug fallback to id
       url: `https://www.jobmeter.app/jobs/${job.slug || job.id}`,
     },
     twitter: {
@@ -112,10 +145,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       description,
     },
     alternates: {
-      // NULL SAFE: slug fallback to id
       canonical: `https://www.jobmeter.app/jobs/${job.slug || job.id}`,
     },
-    robots: {
+    robots: isNoIndex
+      ? { index: false, follow: true }
+      : {
           index: true,
           follow: true,
           googleBot: {
@@ -129,6 +163,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
+// ─── View count ───────────────────────────────────────────────────────────────
+
 async function incrementViewCount(slug: string) {
   const supabase = createClient();
   try {
@@ -137,6 +173,8 @@ async function incrementViewCount(slug: string) {
     console.error('Error incrementing view count:', error);
   }
 }
+
+// ─── Related jobs ─────────────────────────────────────────────────────────────
 
 async function fetchRelatedJobs(currentJob: any) {
   const supabase = createClient();
@@ -147,8 +185,6 @@ async function fetchRelatedJobs(currentJob: any) {
   let relatedJobs: any[] = [];
   const MAX_JOBS = 10;
 
-  // First, fetch jobs by category (up to 8)
-  // NULL SAFE: Check if category exists
   if (currentJob.category) {
     const { data: categoryJobs, error: catError } = await supabase
       .from('jobs')
@@ -165,8 +201,6 @@ async function fetchRelatedJobs(currentJob: any) {
     }
   }
 
-  // If less than MAX_JOBS, fetch jobs by sector
-  // NULL SAFE: Check if sector exists
   if (relatedJobs.length < MAX_JOBS && currentJob.sector) {
     const excludeIds = [currentJob.id, ...relatedJobs.map(job => job.id)];
     const remainingSlots = MAX_JOBS - relatedJobs.length;
@@ -187,10 +221,11 @@ async function fetchRelatedJobs(currentJob: any) {
     }
   }
 
-  // NULL SAFE: Filter out jobs with missing critical fields
   const validJobs = relatedJobs.filter(job => job && job.slug && job.title);
   return validJobs.slice(0, MAX_JOBS);
 }
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function JobPage({ params }: { params: { slug: string } }) {
   const supabase = createClient();
@@ -207,12 +242,9 @@ export default async function JobPage({ params }: { params: { slug: string } }) 
     notFound();
   }
 
-  // Increment view count (non-blocking)
   incrementViewCount(params.slug);
 
-  // Fetch related jobs
   const relatedJobs = await fetchRelatedJobs(job);
-
   const schema = mapJobToSchema(job);
 
   return (
@@ -223,7 +255,6 @@ export default async function JobPage({ params }: { params: { slug: string } }) 
           __html: JSON.stringify(schema),
         }}
       />
-
       <JobClient job={job} relatedJobs={relatedJobs} />
     </>
   );

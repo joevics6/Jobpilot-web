@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { User, Bell, LogOut, ChevronRight, Mail, Shield, HelpCircle, LogIn, Info } from 'lucide-react';
+import { User, Bell, LogOut, ChevronRight, Mail, Shield, HelpCircle, LogIn, Info, Trash2, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,18 @@ interface ProfileData {
   full_name: string | null;
   email: string;
 }
+
+type BustStatus = 'idle' | 'loading' | 'success' | 'error';
+
+// ─── Keys that need to be cleared on all clients ──────────────────────────────
+const CLIENT_CACHE_KEYS = [
+  'latest_jobs_cache',
+  'latest_jobs_cache_ts',
+  'latest_jobs_cache_version',
+  'jobs_cache',
+  'jobs_cache_timestamp',
+  'jobs_cache_user_id',
+];
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -24,24 +36,20 @@ export default function SettingsPage() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  // Admin panel state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [bustStatus, setBustStatus] = useState<BustStatus>('idle');
+  const [bustMessage, setBustMessage] = useState('');
+  const [adminSecret, setAdminSecret] = useState('');
+  const [showSecretInput, setShowSecretInput] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadProfileData();
-      loadSettings();
-    }
-  }, [user]);
+  useEffect(() => { checkAuth(); }, []);
+  useEffect(() => { if (user) { loadProfileData(); loadSettings(); } }, [user]);
 
   const checkAuth = async () => {
     try {
       const { data: { user: authUser }, error } = await supabase.auth.getUser();
-      if (error || !authUser) {
-        setLoading(false);
-        return; // Don't redirect, just show sign in bar
-      }
+      if (error || !authUser) { setLoading(false); return; }
       setUser(authUser);
       setLoading(false);
     } catch (error) {
@@ -52,82 +60,50 @@ export default function SettingsPage() {
 
   const loadProfileData = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, email')
+        .select('full_name, email, role')
         .eq('id', user.id)
         .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading profile:', error);
-        return;
-      }
-
-      setProfileData({
-        full_name: data?.full_name || null,
-        email: data?.email || user.email || '',
-      });
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    }
+      if (error && error.code !== 'PGRST116') { console.error('Error loading profile:', error); return; }
+      setProfileData({ full_name: data?.full_name || null, email: data?.email || user.email || '' });
+      setIsAdmin(data?.role === 'admin');
+    } catch (error) { console.error('Error loading profile:', error); }
   };
 
   const loadSettings = () => {
     if (typeof window === 'undefined' || !user) return;
-
     try {
-      const notificationsKey = `notificationsEnabled:${user.id}`;
-      const notifications = localStorage.getItem(notificationsKey);
+      const notifications = localStorage.getItem(`notificationsEnabled:${user.id}`);
       const emailPrefs = localStorage.getItem('emailUpdatesEnabled');
-
-      if (notifications !== null) {
-        setNotificationsEnabled(JSON.parse(notifications));
-      }
-
-      if (emailPrefs !== null) {
-        setEmailUpdates(JSON.parse(emailPrefs));
-      }
-    } catch (error) {
-      console.error('Error loading settings:', error);
-    }
+      if (notifications !== null) setNotificationsEnabled(JSON.parse(notifications));
+      if (emailPrefs !== null) setEmailUpdates(JSON.parse(emailPrefs));
+    } catch (error) { console.error('Error loading settings:', error); }
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {
     if (typeof window === 'undefined') return;
-
     try {
       setNotificationsEnabled(enabled);
-      const userId = user?.id || 'anonymous';
-      const notificationsKey = `notificationsEnabled:${userId}`;
-      localStorage.setItem(notificationsKey, JSON.stringify(enabled));
-    } catch (error) {
-      console.error('Error saving notification setting:', error);
-    }
+      localStorage.setItem(`notificationsEnabled:${user?.id || 'anonymous'}`, JSON.stringify(enabled));
+    } catch (error) { console.error('Error saving notification setting:', error); }
   };
 
   const handleEmailToggle = async (enabled: boolean) => {
     if (typeof window === 'undefined') return;
-
     try {
       setEmailUpdates(enabled);
       localStorage.setItem('emailUpdatesEnabled', JSON.stringify(enabled));
-    } catch (error) {
-      console.error('Error saving email setting:', error);
-    }
+    } catch (error) { console.error('Error saving email setting:', error); }
   };
 
   const handleSignOut = async () => {
-    if (!confirm('Are you sure you want to sign out?')) {
-      return;
-    }
-
+    if (!confirm('Are you sure you want to sign out?')) return;
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      setUser(null);
-      setProfileData(null);
+      setUser(null); setProfileData(null);
       router.push('/');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -137,31 +113,13 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     if (!user || !profileData) return;
-
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: profileData.full_name,
-          email: profileData.email,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'id',
-        });
-
+      const { error } = await supabase.from('profiles').upsert({ id: user.id, full_name: profileData.full_name, email: profileData.email, updated_at: new Date().toISOString() }, { onConflict: 'id' });
       if (error) throw error;
-
-      // Also update auth email if it changed
       if (profileData.email !== user.email) {
-        const { error: updateError } = await supabase.auth.updateUser({
-          email: profileData.email,
-        });
-        if (updateError) {
-          console.error('Error updating auth email:', updateError);
-        }
+        const { error: updateError } = await supabase.auth.updateUser({ email: profileData.email });
+        if (updateError) console.error('Error updating auth email:', updateError);
       }
-
       setShowProfileEdit(false);
       alert('Profile updated successfully!');
     } catch (error: any) {
@@ -169,12 +127,58 @@ export default function SettingsPage() {
     }
   };
 
+  // ── Admin: clear all client caches locally + bust Redis via API ─────────────
+  const handleAdminCacheBust = async () => {
+    if (!adminSecret.trim()) { setBustMessage('Please enter the admin secret.'); return; }
+    setBustStatus('loading');
+    setBustMessage('');
+
+    try {
+      // 1. Call the API to clear Redis
+      const res = await fetch(`/api/jobs?action=bust_cache&admin_secret=${encodeURIComponent(adminSecret.trim())}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setBustStatus('error');
+        setBustMessage(data.error || 'Failed to clear Redis cache. Check your secret.');
+        return;
+      }
+
+      // 2. Clear this browser's own localStorage/sessionStorage caches
+      CLIENT_CACHE_KEYS.forEach(key => {
+        try { localStorage.removeItem(key); } catch { }
+        try { sessionStorage.removeItem(key); } catch { }
+      });
+
+      // 3. Store the new version so other tabs/windows pick it up
+      if (data.version) {
+        try { localStorage.setItem('jobs_cache_bust_version', data.version); } catch { }
+      }
+
+      setBustStatus('success');
+      setBustMessage(`Redis cleared ✓ · New version: ${data.version || 'n/a'} · All users will get fresh data on next load.`);
+      setAdminSecret('');
+      setShowSecretInput(false);
+    } catch (err) {
+      console.error('Cache bust error:', err);
+      setBustStatus('error');
+      setBustMessage('Network error — could not reach the cache API.');
+    }
+  };
+
+  // ── Clear only this browser's local caches (anyone can do this) ─────────────
+  const handleClearMyCache = () => {
+    CLIENT_CACHE_KEYS.forEach(key => {
+      try { localStorage.removeItem(key); } catch { }
+      try { sessionStorage.removeItem(key); } catch { }
+    });
+    alert('Your local job cache has been cleared. Reload the jobs page to fetch fresh data.');
+  };
+
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
     const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name.charAt(0).toUpperCase();
   };
 
@@ -189,139 +193,174 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
       {/* Header */}
-      <div
-        className="pt-12 pb-8 px-6"
-        style={{
-          backgroundColor: theme.colors.primary.DEFAULT,
-        }}
-      >
-        <Link href="/jobs" className="text-sm text-white/80 hover:text-white transition-colors self-start">
-          ← Back to Jobs
-        </Link>
+      <div className="pt-12 pb-8 px-6" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
+        <Link href="/jobs" className="text-sm text-white/80 hover:text-white transition-colors self-start">← Back to Jobs</Link>
         <h1 className="text-xl font-bold mb-2 text-white">Settings</h1>
         <p className="text-sm text-white/80">Manage your account and preferences</p>
       </div>
 
       <div className="px-6 pt-5 pb-32 max-w-4xl mx-auto">
-        {/* Profile Card - Only show when signed in */}
+
+        {/* Profile card */}
         {user ? (
           <div className="bg-white rounded-xl p-6 mb-6 shadow-sm border border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
-              <div
-                className="w-15 h-15 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ 
-                  width: '60px',
-                  height: '60px',
-                  backgroundColor: theme.colors.primary.DEFAULT 
-                }}
-              >
-                <span className="text-lg font-bold text-white">
-                  {getInitials(profileData?.full_name || null)}
-                </span>
+              <div className="w-15 h-15 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ width: '60px', height: '60px', backgroundColor: theme.colors.primary.DEFAULT }}>
+                <span className="text-lg font-bold text-white">{getInitials(profileData?.full_name || null)}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold mb-1 text-gray-900">
-                  {profileData?.full_name || 'Profile'}
-                </h3>
-                {profileData?.email && (
-                  <p className="text-sm text-gray-600 truncate">
-                    {profileData.email}
-                  </p>
-                )}
+                <h3 className="text-base font-bold mb-1 text-gray-900">{profileData?.full_name || 'Profile'}</h3>
+                {profileData?.email && <p className="text-sm text-gray-600 truncate">{profileData.email}</p>}
               </div>
             </div>
-            <button
-              onClick={() => setShowProfileEdit(!showProfileEdit)}
+            <button onClick={() => setShowProfileEdit(!showProfileEdit)}
               className="px-4 py-2 rounded-lg border text-sm font-semibold transition-colors"
-              style={{
-                backgroundColor: theme.colors.primary.light + '20',
-                borderColor: theme.colors.primary.DEFAULT,
-                color: theme.colors.primary.DEFAULT,
-              }}
-            >
+              style={{ backgroundColor: theme.colors.primary.light + '20', borderColor: theme.colors.primary.DEFAULT, color: theme.colors.primary.DEFAULT }}>
               {showProfileEdit ? 'Cancel' : 'Edit'}
             </button>
           </div>
         ) : (
-          /* Sign In Bar - Show when not signed in - Same as homepage */
-          <div
-            className="mb-6 border-b"
-            style={{
-              backgroundColor: theme.colors.primary.DEFAULT + '10',
-              borderColor: theme.colors.border.DEFAULT,
-            }}
-          >
+          <div className="mb-6 border-b" style={{ backgroundColor: theme.colors.primary.DEFAULT + '10', borderColor: theme.colors.border.DEFAULT }}>
             <div className="flex items-center justify-between gap-4 p-4">
-              <span className="text-sm font-medium flex-1" style={{ color: theme.colors.primary.DEFAULT }}>
-                Sign up to access your settings and personalized features.
-              </span>
-              <Button
-                onClick={() => setAuthModalOpen(true)}
-                size="sm"
-                style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-                className="flex-shrink-0"
-              >
-                <LogIn size={16} className="mr-2" />
-                Sign Up
+              <span className="text-sm font-medium flex-1" style={{ color: theme.colors.primary.DEFAULT }}>Sign up to access your settings and personalized features.</span>
+              <Button onClick={() => setAuthModalOpen(true)} size="sm" style={{ backgroundColor: theme.colors.primary.DEFAULT }} className="flex-shrink-0">
+                <LogIn size={16} className="mr-2" />Sign Up
               </Button>
             </div>
           </div>
         )}
 
-        {/* Profile Edit Form - Only show when editing */}
+        {/* Profile edit form */}
         {user && showProfileEdit && (
           <div className="bg-white rounded-xl p-6 mb-6 shadow-sm border border-gray-100">
             <h2 className="text-lg font-semibold mb-4 text-gray-900">Edit Profile</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={profileData?.full_name || ''}
-                  onChange={(e) => {
-                    if (profileData) {
-                      setProfileData({ ...profileData, full_name: e.target.value });
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter your full name"
-                />
+                <input type="text" value={profileData?.full_name || ''}
+                  onChange={(e) => { if (profileData) setProfileData({ ...profileData, full_name: e.target.value }); }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your full name" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={profileData?.email || ''}
-                  onChange={(e) => {
-                    if (profileData) {
-                      setProfileData({ ...profileData, email: e.target.value });
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter your email"
-                />
+                <input type="email" value={profileData?.email || ''}
+                  onChange={(e) => { if (profileData) setProfileData({ ...profileData, email: e.target.value }); }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your email" />
               </div>
-              <button
-                onClick={handleSaveProfile}
-                className="w-full px-4 py-3 rounded-lg font-semibold text-sm text-white"
-                style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-              >
+              <button onClick={handleSaveProfile} className="w-full px-4 py-3 rounded-lg font-semibold text-sm text-white" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
                 Save Changes
               </button>
             </div>
           </div>
         )}
 
-        {/* Notifications Section */}
+        {/* ── Admin Cache Control ── Only visible to admin users ──────────── */}
+        {isAdmin && (
+          <div className="mb-6">
+            <h2 className="text-base font-semibold mb-2 px-1 flex items-center gap-2" style={{ color: '#DC2626' }}>
+              <Shield size={16} />
+              Admin Cache Control
+            </h2>
+            <div className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
+              {/* Clear Redis + force all users to refetch */}
+              <div className="p-5 border-b border-red-100">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-0.5">Force Clear Redis Cache</h3>
+                    <p className="text-xs text-gray-500">
+                      Deletes the Redis primary + stale cache and bumps the global version number.
+                      All users will get fresh data from Supabase on their next page load.
+                    </p>
+                  </div>
+                  <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FEF2F2', color: '#DC2626' }}>
+                    REDIS
+                  </span>
+                </div>
+
+                {!showSecretInput ? (
+                  <button
+                    onClick={() => { setShowSecretInput(true); setBustStatus('idle'); setBustMessage(''); }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all text-white"
+                    style={{ backgroundColor: '#DC2626' }}
+                  >
+                    <Trash2 size={14} />
+                    Clear Redis Cache
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Admin Secret (set in ADMIN_CACHE_SECRET env var)</label>
+                      <input
+                        type="password"
+                        value={adminSecret}
+                        onChange={(e) => setAdminSecret(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAdminCacheBust(); }}
+                        placeholder="Enter admin secret..."
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleAdminCacheBust}
+                        disabled={bustStatus === 'loading'}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg text-white transition-all disabled:opacity-60"
+                        style={{ backgroundColor: '#DC2626' }}
+                      >
+                        {bustStatus === 'loading' ? <><RefreshCw size={14} className="animate-spin" />Clearing...</> : <><Trash2 size={14} />Confirm Clear</>}
+                      </button>
+                      <button
+                        onClick={() => { setShowSecretInput(false); setAdminSecret(''); setBustStatus('idle'); setBustMessage(''); }}
+                        className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {bustMessage && (
+                      <div className={`flex items-start gap-2 p-3 rounded-lg text-xs font-medium ${bustStatus === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                        {bustStatus === 'success' ? <CheckCircle size={14} className="flex-shrink-0 mt-0.5" /> : <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />}
+                        {bustMessage}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Clear local cache only */}
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-0.5">Clear My Local Cache</h3>
+                    <p className="text-xs text-gray-500">
+                      Clears only this browser's localStorage/sessionStorage job cache. 
+                      Does not affect Redis or other users.
+                    </p>
+                  </div>
+                  <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FFF7ED', color: '#EA580C' }}>
+                    LOCAL
+                  </span>
+                </div>
+                <button
+                  onClick={handleClearMyCache}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all border"
+                  style={{ borderColor: '#EA580C', color: '#EA580C', backgroundColor: '#FFF7ED' }}
+                >
+                  <RefreshCw size={14} />
+                  Clear Local Cache
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications */}
         <div className="mb-6">
           <h2 className="text-base font-semibold mb-2 px-1 text-gray-700">Notifications</h2>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <div className="flex items-center gap-3 flex-1">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: theme.colors.accent.blue + '15' }}
-                >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: theme.colors.accent.blue + '15' }}>
                   <Bell size={20} style={{ color: theme.colors.accent.blue }} />
                 </div>
                 <div className="text-left flex-1">
@@ -330,21 +369,13 @@ export default function SettingsPage() {
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationsEnabled}
-                  onChange={(e) => handleNotificationToggle(e.target.checked)}
-                  className="sr-only peer"
-                />
+                <input type="checkbox" checked={notificationsEnabled} onChange={(e) => handleNotificationToggle(e.target.checked)} className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3 flex-1">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: theme.colors.accent.gold + '15' }}
-                >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: theme.colors.accent.gold + '15' }}>
                   <Mail size={20} style={{ color: theme.colors.accent.gold }} />
                 </div>
                 <div className="text-left flex-1">
@@ -353,124 +384,45 @@ export default function SettingsPage() {
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={emailUpdates}
-                  onChange={(e) => handleEmailToggle(e.target.checked)}
-                  className="sr-only peer"
-                />
+                <input type="checkbox" checked={emailUpdates} onChange={(e) => handleEmailToggle(e.target.checked)} className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </div>
         </div>
 
-        {/* Support Section */}
+        {/* Support */}
         <div className="mb-6">
           <h2 className="text-base font-semibold mb-2 px-1 text-gray-700">Support</h2>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <Link
-              href="/about"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-100"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: theme.colors.primary.DEFAULT + '15' }}
-                >
-                  <Info size={20} style={{ color: theme.colors.primary.DEFAULT }} />
+            {[
+              { href: '/about', icon: <Info size={20} style={{ color: theme.colors.primary.DEFAULT }} />, bg: theme.colors.primary.DEFAULT + '15', label: 'About Us', desc: 'Learn more about JobMeter' },
+              { href: '/privacy-policy', icon: <Shield size={20} style={{ color: theme.colors.text.secondary }} />, bg: theme.colors.text.secondary + '15', label: 'Privacy Policy', desc: 'Learn how we protect your data' },
+              { href: '/contact', icon: <Mail size={20} style={{ color: theme.colors.success }} />, bg: theme.colors.success + '15', label: 'Contact Us', desc: 'Get help and support' },
+              { href: '/terms-of-service', icon: <HelpCircle size={20} style={{ color: theme.colors.text.secondary }} />, bg: theme.colors.text.secondary + '15', label: 'Terms of Service', desc: 'Read our terms and conditions' },
+              { href: '/disclaimer', icon: <HelpCircle size={20} style={{ color: theme.colors.accent.gold }} />, bg: theme.colors.accent.gold + '15', label: 'Disclaimer', desc: 'Important legal disclaimers' },
+            ].map((item, i, arr) => (
+              <Link key={item.href} href={item.href}
+                className={`flex items-center justify-between p-4 hover:bg-gray-50 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: item.bg }}>{item.icon}</div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-gray-900">{item.label}</h3>
+                    <p className="text-xs text-gray-600">{item.desc}</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">About Us</h3>
-                  <p className="text-xs text-gray-600">Learn more about JobMeter</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-gray-400" />
-            </Link>
-            <Link
-              href="/privacy-policy"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-100"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: theme.colors.text.secondary + '15' }}
-                >
-                  <Shield size={20} style={{ color: theme.colors.text.secondary }} />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">Privacy Policy</h3>
-                  <p className="text-xs text-gray-600">Learn how we protect your data</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-gray-400" />
-            </Link>
-            <Link
-              href="/contact"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-100"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: theme.colors.success + '15' }}
-                >
-                  <Mail size={20} style={{ color: theme.colors.success }} />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">Contact Us</h3>
-                  <p className="text-xs text-gray-600">Get help and support</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-gray-400" />
-            </Link>
-            <Link
-              href="/terms-of-service"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-100"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: theme.colors.text.secondary + '15' }}
-                >
-                  <HelpCircle size={20} style={{ color: theme.colors.text.secondary }} />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">Terms of Service</h3>
-                  <p className="text-xs text-gray-600">Read our terms and conditions</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-gray-400" />
-            </Link>
-            <Link
-              href="/disclaimer"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: theme.colors.accent.gold + '15' }}
-                >
-                  <HelpCircle size={20} style={{ color: theme.colors.accent.gold }} />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">Disclaimer</h3>
-                  <p className="text-xs text-gray-600">Important legal disclaimers</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-gray-400" />
-            </Link>
+                <ChevronRight size={20} className="text-gray-400" />
+              </Link>
+            ))}
           </div>
         </div>
 
-        {/* Account Section - Only show when signed in */}
+        {/* Account */}
         {user && (
           <div className="mb-6">
             <h2 className="text-base font-semibold mb-2 px-1 text-gray-700">Account</h2>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center justify-between p-4 hover:bg-red-50 transition-colors"
-              >
+              <button onClick={handleSignOut} className="w-full flex items-center justify-between p-4 hover:bg-red-50 transition-colors">
                 <div className="flex items-center gap-3">
                   <LogOut size={20} style={{ color: theme.colors.error }} />
                   <div className="text-left">
@@ -484,17 +436,14 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* App Info */}
+        {/* App info */}
         <div className="text-center py-8">
           <p className="text-xs text-gray-500 font-medium mb-1">JobPilot v1.0.0</p>
           <p className="text-xs text-gray-400">Your smart career companion</p>
         </div>
       </div>
 
-      <AuthModal
-        open={authModalOpen}
-        onOpenChange={setAuthModalOpen}
-      />
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }
