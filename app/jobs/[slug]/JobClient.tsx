@@ -35,10 +35,9 @@ import AdUnit from '@/components/ads/AdUnit';
 // Each placement MUST use a unique slot ID. Reusing the same slot on one page
 // causes AdSense to silently drop all but the first push({}) call.
 const AD_SLOTS = {
-  BANNER_TOP:    '6866736453',   // jobpage-banner-top      — after job header card
-  IN_ARTICLE:    '5553654784',   // jobpage-inarticle        — after job description
-  BANNER_BOTTOM: '4240573110',   // jobpage-banner-bottom    — end of main content
-  SIDEBAR:       '9189647463',   // jobpage-sidebar          — right column
+  BANNER_TOP:  '6866736453',   // jobpage-banner-top  — after job header card
+  IN_ARTICLE:  '5553654784',   // jobpage-inarticle   — after job description
+  SIDEBAR:     '9189647463',   // jobpage-sidebar     — right column
 } as const;
 // ───────────────────────────────────────────────────────────────────────────────
 
@@ -1012,12 +1011,10 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                   </a>
                 </div>
               )}
-              {/* ── AD #3: Banner at the end of main content ── */}
-              <div className="w-full rounded-lg">
-                <AdUnit key={AD_SLOTS.BANNER_BOTTOM} slot={AD_SLOTS.BANNER_BOTTOM} format="auto" />
-              </div>
-
             </div>
+
+            {/* ═══════════════════════════════════════════════
+                RIGHT COLUMN — Sidebar
             ═══════════════════════════════════════════════ */}
             <div className="lg:col-span-1 space-y-6">
 
