@@ -530,6 +530,25 @@ export default function JobList({ initialCountry, initialRoleCategory, initialJo
   const fetchJobs = async (forceRefresh = false) => {
     try {
       setLoading(true);
+
+      // Check localStorage cache before hitting the API (mirrors fetchLatestJobs pattern)
+      if (!forceRefresh) {
+        try {
+          const cachedJobs = localStorage.getItem(STORAGE_KEYS.MATCHES_CACHE);
+          const cacheTimestamp = localStorage.getItem(STORAGE_KEYS.MATCHES_CACHE_TS);
+          const cachedUserId = localStorage.getItem(STORAGE_KEYS.MATCHES_CACHE_USER);
+          if (cachedJobs && cacheTimestamp) {
+            const age = Date.now() - parseInt(cacheTimestamp, 10);
+            const userMatches = (!user && !cachedUserId) || (user && cachedUserId === user.id);
+            if (age < CLIENT_CACHE_DURATION && userMatches) {
+              setJobs(JSON.parse(cachedJobs));
+              setLoading(false);
+              return;
+            }
+          }
+        } catch { /* corrupt cache — fall through */ }
+      }
+
       const res = await fetch('/api/jobs');
       if (!res.ok) throw new Error(`Jobs API error: ${res.status}`);
       const { jobs: data } = await res.json();

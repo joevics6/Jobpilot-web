@@ -60,18 +60,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    // ── 1. Read cache version (for client cache invalidation) ─────────────
+    // ── 1+2. Read version + primary cache in one round-trip ─────────────
+    // mget cuts 2 Redis commands down to 1 on every request
     let cacheVersion: string | null = null;
+    let cached: unknown[] | null = null;
     try {
-      const rawVersion = await redis.get(VERSION_KEY);
+      const [rawVersion, rawCache] = await redis.mget(VERSION_KEY, CACHE_KEY);
       cacheVersion = rawVersion ? String(rawVersion) : null;
+      cached = parseRedisValue(rawCache);
     } catch {
-      // non-fatal — clients will still work without version
+      // non-fatal — fall through to Supabase
     }
-
-    // ── 2. Check Redis primary cache ──────────────────────────────────────
-    const raw = await redis.get(CACHE_KEY);
-    const cached = parseRedisValue(raw);
 
     if (cached) {
       console.log(`[jobs-api] Cache HIT — ${cached.length} jobs`);

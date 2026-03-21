@@ -4,7 +4,7 @@ import { mapJobToSchema } from '@/lib/mapJobToSchema';
 import JobClient from './JobClient';
 import { Metadata } from 'next';
 
-export const revalidate = 3600;
+export const revalidate = false; // Cache indefinitely — job pages don't change once created. Busts on new deployment.
 
 const KNOWN_COUNTRIES = [
   'us', 'united-states', 'canada', 'australia', 'new-zealand',

@@ -80,20 +80,18 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
       const companyName = getCompanyName();
       if (!companyName || companyName === 'Unknown Company') return;
 
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('id, title, company, location, category, sector, slug')
-        .eq('company', companyName)
-        .neq('id', jobId)
-        .eq('is_published', true)
-        .limit(5);
+      const res = await fetch('/api/jobs');
+      if (!res.ok) return;
+      const { jobs: allJobs } = await res.json();
 
-      if (error) {
-        console.error('Error loading company jobs:', error);
-        return;
-      }
+      const companyJobs = (allJobs || [])
+        .filter((j: any) => {
+          const jCompany = typeof j.company === 'string' ? j.company : j.company?.name || '';
+          return jCompany === companyName && j.id !== jobId;
+        })
+        .slice(0, 5);
 
-      setCompanyJobs(data || []);
+      setCompanyJobs(companyJobs);
     } catch (error) {
       console.error('Error loading company jobs:', error);
     }
@@ -188,60 +186,41 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
   const loadSimilarJobs = async () => {
     try {
       if (!userCountry) return;
-      
+
       const jobLocation = typeof job.location === 'object' ? job.location : null;
       const jobCountry = jobLocation?.country || 'Nigeria';
       const filterCountry = userCountry || jobCountry;
 
-      let query = supabase
-        .from('jobs')
-        .select('id, title, company, location, category, sector, slug')
-        .neq('id', jobId)
-        .eq('is_published', true)
-        .limit(15);
+      const res = await fetch('/api/jobs');
+      if (!res.ok) return;
+      const { jobs: allJobs } = await res.json();
 
-      if (job.category) {
-        query = query.eq('category', job.category);
-      }
+      const pool = (allJobs || []).filter((j: any) => j.id !== jobId);
 
-      const { data: categoryJobs, error: categoryError } = await query;
-
-      if (categoryError) {
-        console.error('Error loading similar jobs:', categoryError);
-        return;
-      }
-
-      let filteredJobs = (categoryJobs || []).filter(j => {
+      // ── Priority 1: same category + same country / remote ─────────────────
+      let filteredJobs = pool.filter((j: any) => {
         const jLoc = typeof j.location === 'object' ? j.location : null;
-        const jCountry = jLoc?.country || '';
+        const jCountry = (jLoc?.country || '').toLowerCase();
         const jRemote = jLoc?.remote || false;
-        return jCountry.toLowerCase() === filterCountry.toLowerCase() || jRemote;
+        const matchesLocation = jCountry === filterCountry.toLowerCase() || jRemote;
+        const matchesCategory = !job.category || j.category === job.category;
+        return matchesCategory && matchesLocation;
       });
 
+      // ── Priority 2: top up with same sector if under 10 ──────────────────
       if (filteredJobs.length < 10 && job.sector) {
-        const remainingCount = 10 - filteredJobs.length;
-        const existingIds = filteredJobs.map(j => j.id);
-
-        const { data: sectorJobs } = await supabase
-          .from('jobs')
-          .select('id, title, company, location, category, sector, slug')
-          .eq('sector', job.sector)
-          .neq('id', jobId)
-          .not('id', 'in', `(${existingIds.join(',')})`)
-          .eq('is_published', true)
-          .limit(remainingCount);
-
-        const finalSectorJobs = (sectorJobs || []).filter(j => {
+        const existingIds = new Set(filteredJobs.map((j: any) => j.id));
+        const sectorJobs = pool.filter((j: any) => {
+          if (existingIds.has(j.id)) return false;
           const jLoc = typeof j.location === 'object' ? j.location : null;
-          const jCountry = jLoc?.country || '';
+          const jCountry = (jLoc?.country || '').toLowerCase();
           const jRemote = jLoc?.remote || false;
-          return jCountry.toLowerCase() === filterCountry.toLowerCase() || jRemote;
+          return j.sector === job.sector && (jCountry === filterCountry.toLowerCase() || jRemote);
         });
-
-        setSimilarJobs([...filteredJobs, ...finalSectorJobs]);
-      } else {
-        setSimilarJobs(filteredJobs.slice(0, 10));
+        filteredJobs = [...filteredJobs, ...sectorJobs].slice(0, 10);
       }
+
+      setSimilarJobs(filteredJobs.slice(0, 10));
     } catch (error) {
       console.error('Error loading similar jobs:', error);
     }

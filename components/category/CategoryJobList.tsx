@@ -106,18 +106,13 @@ export default function CategoryJobList({ category, location, jobType, roleCateg
   const fetchCategoryJobs = async () => {
     try {
       setLoading(true);
-      
-      // Calculate date 30 days ago
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
-      
-      // Build query
+
+      // Category pages fetch directly from Supabase — they need all jobs including
+      // expired/older ones that are not in the Redis cache (active, last 30 days only).
       let query = supabase
         .from('jobs')
         .select('id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, role, related_roles, ai_enhanced_roles, skills_required, ai_enhanced_skills, experience_level')
-        .eq('status', 'active')
-        .gte('created_at', thirtyDaysAgoISO)
+        .in('status', ['active', 'expired', 'expired_indexed'])
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -141,8 +136,7 @@ export default function CategoryJobList({ category, location, jobType, roleCateg
       if (error) throw error;
 
       const processedJobs = await processJobsWithMatching(data || []);
-      
-      // Sort by date initially
+
       processedJobs.sort((a, b) => {
         const dateA = new Date(a.postedDate || 0).getTime();
         const dateB = new Date(b.postedDate || 0).getTime();

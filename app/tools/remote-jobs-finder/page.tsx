@@ -130,75 +130,64 @@ export default function RemoteJobsPage() {
   };
 
   const fetchRemoteJobs = async () => {
-    try {
+  try {
       setLoading(true);
-      
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
-      
-      // Build query for counting total
-      let countQuery = supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .eq('location->>remote', 'true')
-        .gte('created_at', thirtyDaysAgoISO);
 
-      if (searchQuery) {
-        countQuery = countQuery.or(`title.ilike.%${searchQuery}%,company->>name.ilike.%${searchQuery}%`);
+      const res = await fetch('/api/jobs');
+      if (!res.ok) throw new Error(`Jobs API error: ${res.status}`);
+      const { jobs: allJobs } = await res.json();
+
+      // ── Primary filter ────────────────────────────────────────────────────
+      let filtered = (allJobs || []).filter((job: any) =>
+        job.location?.remote === true
+      );
+
+      // ── Search ────────────────────────────────────────────────────────────
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter((job: any) => {
+          const title = (job.title || '').toLowerCase();
+          const company = typeof job.company === 'string'
+            ? job.company.toLowerCase()
+            : (job.company?.name || '').toLowerCase();
+          return title.includes(q) || company.includes(q);
+        });
+        saveSearchHistory(searchQuery.trim(), filtered.length);
       }
+
+      // ── Sector filter ─────────────────────────────────────────────────────
       if (filters.sector.length > 0) {
-        countQuery = countQuery.in('sector', filters.sector);
+        filtered = filtered.filter((job: any) => filters.sector.includes(job.sector));
       }
+      // ── Employment type filter ────────────────────────────────────────────
       if (filters.employmentType.length > 0) {
-        countQuery = countQuery.in('employment_type', filters.employmentType);
+        filtered = filtered.filter((job: any) =>
+          filters.employmentType.includes(job.employment_type)
+        );
       }
 
-      const { count, error: countError } = await countQuery;
-      
-      if (countError) throw countError;
-      
-      const total = count || 0;
+      // ── Sort + paginate ───────────────────────────────────────────────────
+      filtered.sort((a: any, b: any) =>
+        new Date(b.posted_date || b.created_at || 0).getTime() -
+        new Date(a.posted_date || a.created_at || 0).getTime()
+      );
+
+      const total = filtered.length;
       setTotalJobs(total);
-      setTotalPages(Math.ceil(total / JOBS_PER_PAGE));
+      setTotalPages(total > 0 ? Math.ceil(total / JOBS_PER_PAGE) : 1);
 
-      // Fetch actual jobs for current page
-      let query = supabase
-        .from('jobs')
-        .select('*')
-        .eq('status', 'active')
-        .eq('location->>remote', 'true')
-        .gte('created_at', thirtyDaysAgoISO)
-        .order('created_at', { ascending: false })
-        .range((currentPage - 1) * JOBS_PER_PAGE, currentPage * JOBS_PER_PAGE - 1);
+      const paginated = filtered.slice(
+        (currentPage - 1) * JOBS_PER_PAGE,
+        currentPage * JOBS_PER_PAGE
+      );
 
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,company->>name.ilike.%${searchQuery}%`);
-      }
-      if (filters.sector.length > 0) {
-        query = query.in('sector', filters.sector);
-      }
-      if (filters.employmentType.length > 0) {
-        query = query.in('employment_type', filters.employmentType);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
+      // ── Match scoring ─────────────────────────────────────────────────────
       let processedJobs;
       if (!user || !userOnboardingData) {
-        processedJobs = (data || []).map((job: any) => transformJobToUI(job, 0, null));
+        processedJobs = paginated.map((job: any) => transformJobToUI(job, 0, null));
       } else {
-        processedJobs = await processJobsWithMatching(data || []);
+        processedJobs = await processJobsWithMatching(paginated);
       }
-      
-      processedJobs.sort((a: JobUI, b: JobUI) => {
-        const dateA = new Date(a.postedDate || 0).getTime();
-        const dateB = new Date(b.postedDate || 0).getTime();
-        return dateB - dateA;
-      });
 
       setJobs(processedJobs);
     } catch (error) {

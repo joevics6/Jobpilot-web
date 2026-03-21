@@ -224,60 +224,51 @@ export default function LatestJobsPage() {
   const fetchLatestJobs = async (page: number = 1) => {
     try {
       setLatestJobsLoading(true);
-      
-      const CACHE_KEY = `latest_jobs_page_${page}`;
-      const CACHE_TIMESTAMP_KEY = `latest_jobs_timestamp_${page}`;
-      
-      // Check cache
-      const cachedData = localStorage.getItem(CACHE_KEY);
-      const cacheTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-      
+
+      const CACHE_KEY = 'latest_jobs_all';
+      const CACHE_TIMESTAMP_KEY = 'latest_jobs_all_ts';
+
+      // Check sessionStorage cache first
+      const cachedData = sessionStorage.getItem(CACHE_KEY);
+      const cacheTimestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
+
+      let allJobs: any[] = [];
+
       if (cachedData && cacheTimestamp) {
-        const timestamp = parseInt(cacheTimestamp, 10);
-        const isCacheValid = Date.now() - timestamp < CACHE_DURATION;
-        
+        const isCacheValid = Date.now() - parseInt(cacheTimestamp, 10) < CACHE_DURATION;
         if (isCacheValid) {
-          const parsedJobs = JSON.parse(cachedData);
-          if (page === 1) {
-            setLatestJobs(parsedJobs);
-          } else {
-            setLatestJobs(prev => [...prev, ...parsedJobs]);
-          }
-          setLatestJobsHasMore(parsedJobs.length === JOBS_PER_PAGE);
-          setLatestJobsLoading(false);
-          return;
+          allJobs = JSON.parse(cachedData);
         }
       }
-      
-      // Fetch from database
+
+      if (allJobs.length === 0) {
+        // Fetch from Redis-cached API instead of Supabase directly
+        const res = await fetch('/api/jobs');
+        if (!res.ok) throw new Error(`Jobs API error: ${res.status}`);
+        const { jobs } = await res.json();
+        allJobs = jobs || [];
+
+        // Cache all jobs in sessionStorage
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(allJobs));
+          sessionStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        } catch (e) {
+          console.warn('sessionStorage write failed:', e);
+        }
+      }
+
+      // Paginate client-side
       const start = (page - 1) * JOBS_PER_PAGE;
-      const end = start + JOBS_PER_PAGE - 1;
-      
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('status', 'active')
-        .order('posted_date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(start, end);
+      const pageJobs = allJobs.slice(start, start + JOBS_PER_PAGE);
+      const uiJobs = pageJobs.map((job: any) => transformJobToUI(job, 0));
 
-      if (error) throw error;
-
-      // Transform to UI format without matching calculation (match: 0)
-      const uiJobs = (data || []).map((job: any) => transformJobToUI(job, 0));
-      
-      // Cache the results
-      localStorage.setItem(CACHE_KEY, JSON.stringify(uiJobs));
-      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-      
-      // Update state
       if (page === 1) {
         setLatestJobs(uiJobs);
       } else {
         setLatestJobs(prev => [...prev, ...uiJobs]);
       }
-      
-      setLatestJobsHasMore(uiJobs.length === JOBS_PER_PAGE);
+
+      setLatestJobsHasMore(start + JOBS_PER_PAGE < allJobs.length);
     } catch (error) {
       console.error('Error fetching latest jobs:', error);
     } finally {

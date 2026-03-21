@@ -130,83 +130,71 @@ export default function AccommodationFinderPage() {
   };
 
   const fetchAccommodationJobs = async () => {
-    try {
+  try {
       setLoading(true);
-      
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
-      
-      let countQuery = supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .eq('accommodation_status', 'yes')
-        .gte('created_at', thirtyDaysAgoISO);
 
-      if (searchQuery) {
-        countQuery = countQuery.or(`title.ilike.%${searchQuery}%,company->>name.ilike.%${searchQuery}%`);
+      const res = await fetch('/api/jobs');
+      if (!res.ok) throw new Error(`Jobs API error: ${res.status}`);
+      const { jobs: allJobs } = await res.json();
+
+      // ── Primary filter ────────────────────────────────────────────────────
+      let filtered = (allJobs || []).filter((job: any) =>
+        job.accommodation_status === 'yes'
+      );
+
+      // ── Search ────────────────────────────────────────────────────────────
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter((job: any) => {
+          const title = (job.title || '').toLowerCase();
+          const company = typeof job.company === 'string'
+            ? job.company.toLowerCase()
+            : (job.company?.name || '').toLowerCase();
+          return title.includes(q) || company.includes(q);
+        });
+        saveSearchHistory(searchQuery.trim(), filtered.length);
       }
+
+      // ── Sector filter ─────────────────────────────────────────────────────
       if (filters.sector.length > 0) {
-        countQuery = countQuery.in('sector', filters.sector);
+        filtered = filtered.filter((job: any) => filters.sector.includes(job.sector));
       }
+      // ── Location filter ───────────────────────────────────────────────────
       if (filters.location.length > 0) {
-        const locationFilters = filters.location.map(loc => 
-          loc === 'Remote' ? 'location->>remote.eq.true' : `location->>country.ilike.%${loc}%,location->>city.ilike.%${loc}%`
+        filtered = filtered.filter((job: any) =>
+          filters.location.some(f => {
+            if (f === 'Remote') return job.location?.remote === true;
+            const city = (job.location?.city || '').toLowerCase();
+            const country = (job.location?.country || '').toLowerCase();
+            const state = (job.location?.state || '').toLowerCase();
+            const fLower = f.toLowerCase();
+            return city.includes(fLower) || country.includes(fLower) || state.includes(fLower);
+          })
         );
-        countQuery = countQuery.or(locationFilters.join(','));
       }
 
-      const { count, error: countError } = await countQuery;
-      
-      if (countError) throw countError;
-      
-      const total = count || 0;
+      // ── Sort + paginate ───────────────────────────────────────────────────
+      filtered.sort((a: any, b: any) =>
+        new Date(b.posted_date || b.created_at || 0).getTime() -
+        new Date(a.posted_date || a.created_at || 0).getTime()
+      );
+
+      const total = filtered.length;
       setTotalJobs(total);
       setTotalPages(total > 0 ? Math.ceil(total / JOBS_PER_PAGE) : 1);
 
-      if (searchQuery.trim()) {
-        saveSearchHistory(searchQuery.trim(), total);
-      }
+      const paginated = filtered.slice(
+        (currentPage - 1) * JOBS_PER_PAGE,
+        currentPage * JOBS_PER_PAGE
+      );
 
-      let query = supabase
-        .from('jobs')
-        .select('*')
-        .eq('status', 'active')
-        .eq('accommodation_status', 'yes')
-        .gte('created_at', thirtyDaysAgoISO)
-        .order('created_at', { ascending: false })
-        .range((currentPage - 1) * JOBS_PER_PAGE, currentPage * JOBS_PER_PAGE - 1);
-
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,company->>name.ilike.%${searchQuery}%`);
-      }
-      if (filters.sector.length > 0) {
-        query = query.in('sector', filters.sector);
-      }
-      if (filters.location.length > 0) {
-        const locationFilters = filters.location.map(loc => 
-          loc === 'Remote' ? 'location->>remote.eq.true' : `location->>country.ilike.%${loc}%,location->>city.ilike.%${loc}%`
-        );
-        query = query.or(locationFilters.join(','));
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
+      // ── Match scoring ─────────────────────────────────────────────────────
       let processedJobs;
       if (!user || !userOnboardingData) {
-        processedJobs = (data || []).map((job: any) => transformJobToUI(job, 0, null));
+        processedJobs = paginated.map((job: any) => transformJobToUI(job, 0, null));
       } else {
-        processedJobs = await processJobsWithMatching(data || []);
+        processedJobs = await processJobsWithMatching(paginated);
       }
-      
-      processedJobs.sort((a: JobUI, b: JobUI) => {
-        const dateA = new Date(a.postedDate || 0).getTime();
-        const dateB = new Date(b.postedDate || 0).getTime();
-        return dateB - dateA;
-      });
 
       setJobs(processedJobs);
     } catch (error) {
