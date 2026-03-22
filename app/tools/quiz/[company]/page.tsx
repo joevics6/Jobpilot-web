@@ -9,7 +9,7 @@ import { COMPANIES, companyToSlug, slugToCompany } from '@/lib/quizCompanies';
 import { quizSupabase } from '@/lib/quizSupabase';
 
 // Cache SEO content for 7 days — rebuild weekly or on redeploy
-export const revalidate = 604800;
+export const revalidate = false;
 
 interface Props {
   params: Promise<{ company: string }>;

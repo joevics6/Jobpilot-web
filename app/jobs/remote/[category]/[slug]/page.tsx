@@ -1,9 +1,15 @@
+// ─── File: page.tsx ───────────────────────────────────────────────────────────
+// Path: app/jobs/remote/[category]/[slug]/page.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import JobClient from '@/app/jobs/[slug]/JobClient';
 import { Metadata } from 'next';
 
-export const revalidate = 3600;
+// Cache forever — clears on deploy or on-demand revalidation
+export const revalidate = false;
+export const dynamicParams = true;
 
 const REMOTE_CATEGORIES: Record<string, { name: string }> = {
   'marketing': { name: 'Marketing' },
@@ -20,19 +26,43 @@ const REMOTE_CATEGORIES: Record<string, { name: string }> = {
   'virtual-assistant': { name: 'Virtual Assistant' },
 };
 
+export async function generateStaticParams() {
+  const supabase = createClient();
+  try {
+    const { data } = await supabase
+      .from('jobs')
+      .select('slug, role_category')
+      .eq('job_type', 'Remote')
+      .in('status', ['active', 'expired', 'expired_indexed']);
+
+    if (!data) return [];
+
+    return data
+      .filter(job => job.slug)
+      .map(job => {
+        // Map role_category back to a slug key
+        const categorySlug = Object.entries(REMOTE_CATEGORIES).find(
+          ([, v]) => v.name === job.role_category
+        )?.[0] ?? 'general';
+        return { category: categorySlug, slug: job.slug };
+      });
+  } catch (error) {
+    console.error('Error generating static params:', error);
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: { params: { category: string; slug: string } }): Promise<Metadata> {
   const supabase = createClient();
   const { slug, category } = params;
-  
+
   const { data: job } = await supabase
     .from('jobs')
-    .select('*')
+    .select('title, company, description')
     .eq('slug', slug)
     .single();
 
-  if (!job) {
-    return { title: 'Job Not Found - JobMeter' };
-  }
+  if (!job) return { title: 'Job Not Found - JobMeter' };
 
   const companyName = typeof job.company === 'string' ? job.company : (job.company?.name || 'Company');
   const categoryName = REMOTE_CATEGORIES[category]?.name || category;
@@ -49,16 +79,14 @@ export async function generateMetadata({ params }: { params: { category: string;
 export default async function RemoteCategoryJobPage({ params }: { params: { category: string; slug: string } }) {
   const supabase = createClient();
   const { slug } = params;
-  
+
   const { data: job } = await supabase
     .from('jobs')
     .select('*')
     .eq('slug', slug)
     .single();
 
-  if (!job) {
-    notFound();
-  }
+  if (!job) notFound();
 
   return <JobClient job={job} />;
 }

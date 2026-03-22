@@ -8,7 +8,7 @@ import { CompanySchema, FAQSchema } from '@/components/seo/StructuredData';
 import { getCompanyName } from '@/lib/utils/companyUtils';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 
-export const revalidate = 86400; // 24 hours - company profiles rarely change
+export const revalidate = false;
 
 interface Company {
   id: string;

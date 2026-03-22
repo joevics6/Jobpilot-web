@@ -1,6 +1,6 @@
-export const revalidate = 86400; // 24 hours - homepage rarely changes
+export const revalidate = false;
 
-import { createClient } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase';
 import HomePage from '@/components/home/HomePage';
 import { OrganizationSchema, WebSiteSchema, BreadcrumbListSchema } from '@/components/seo/StructuredData';
 import { Metadata } from 'next';
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'JobMeter — ind Jobs That Match Your Skills & Experiences',
+    title: 'JobMeter — Find Jobs That Match Your Skills & Experiences',
     description: 'Discover your next career opportunity with JobMeter. Smart job matching connects you with thousands of jobs across industries.',
   },
   alternates: {
@@ -47,8 +47,6 @@ export const metadata: Metadata = {
 };
 
 async function getLatestJobs() {
-  const supabase = createClient();
-  
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
@@ -69,8 +67,6 @@ async function getLatestJobs() {
 }
 
 async function getLatestBlogPosts() {
-  const supabase = createClient();
-  
   const { data, error } = await supabase
     .from('blogs')
     .select('id, slug, title, excerpt, created_at')

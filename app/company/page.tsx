@@ -82,7 +82,7 @@ function groupByIndustry(companies: Company[]) {
   return Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
 }
 
-export const revalidate = 86400; // 24 hours
+export const revalidate = false;
 
 export default async function CompanyDirectoryPage({ searchParams }: Props) {
   const companyName = searchParams?.name;

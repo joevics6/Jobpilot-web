@@ -73,7 +73,7 @@ async function getJobCountsByState(): Promise<StateJobCount[]> {
   }
 }
 
-export const revalidate = 3600; // Revalidate every hour
+export const revalidate = false;
 
 export default async function AllStatesPage() {
   const stateCounts = await getJobCountsByState();

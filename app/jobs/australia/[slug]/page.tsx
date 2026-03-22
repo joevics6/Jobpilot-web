@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import JobClient from '@/app/jobs/[slug]/JobClient';
 import { Metadata } from 'next';
 
-export const revalidate = 3600;
+export const revalidate = false;
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const supabase = createClient();

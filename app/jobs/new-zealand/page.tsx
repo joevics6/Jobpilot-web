@@ -2,7 +2,7 @@ import JobList from '@/components/jobs/JobList';
 import { Metadata } from 'next';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
 
-export const revalidate = 1800;
+export const revalidate = false;
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 

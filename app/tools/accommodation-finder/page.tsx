@@ -1,444 +1,10 @@
-"use client";
-
-import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
-import JobCard from '@/components/jobs/JobCard';
-import { JobUI } from '@/components/jobs/JobCard';
-import MatchBreakdownModal from '@/components/jobs/MatchBreakdownModal';
-import { MatchBreakdownModalData } from '@/components/jobs/MatchBreakdownModal';
-import { ChevronDown, Briefcase, Home, Search, Filter, X, Laptop, Globe, GraduationCap, Award, Rocket, ClipboardList, Wifi } from 'lucide-react';
-import { scoreJob, JobRow, UserOnboardingData } from '@/lib/matching/matchEngine';
-import { matchCacheService } from '@/lib/matching/matchCache';
+import { Home, Briefcase, Globe, GraduationCap, Award, Rocket, ClipboardList, Wifi } from 'lucide-react';
+import { AccommodationFinderClient } from './AccommodationFinderClient';
 
-const STORAGE_KEYS = {
-  SAVED_JOBS: 'saved_jobs',
-  APPLIED_JOBS: 'applied_jobs',
-};
-
-const JOBS_PER_PAGE = 20;
+export const revalidate = false;
 
 export default function AccommodationFinderPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  
-  const [user, setUser] = useState<any>(null);
-  const [jobs, setJobs] = useState<JobUI[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [savedJobs, setSavedJobs] = useState<string[]>([]);
-  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
-  const [matchModalOpen, setMatchModalOpen] = useState(false);
-  const [matchModalData, setMatchModalData] = useState<MatchBreakdownModalData | null>(null);
-  const [sortBy, setSortBy] = useState<'match' | 'date'>('date');
-  const [userOnboardingData, setUserOnboardingData] = useState<UserOnboardingData | null>(null);
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    sector: [] as string[],
-    location: [] as string[],
-  });
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalJobs, setTotalJobs] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const sectors = [
-    'Technology', 'Marketing', 'Sales', 'Design', 'Finance', 
-    'Healthcare', 'Education', 'Engineering', 'Admin', 'Customer Service', 
-    'Legal', 'HR', 'Manufacturing', 'Retail', 'Media'
-  ];
-
-  const locations = [
-    'Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Kano', 
-    'Benin City', 'Abuja', 'Remote'
-  ];
-
-  useEffect(() => {
-    checkAuth();
-    loadSavedJobs();
-    loadAppliedJobs();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user);
-      } else {
-        setUser(null);
-        setUserOnboardingData(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      fetchUserOnboardingData();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const searchParam = searchParams.get('search');
-    const sectorParam = searchParams.get('sector');
-    const locationParam = searchParams.get('location');
-    const pageParam = searchParams.get('page');
-
-    if (searchParam) setSearchQuery(searchParam);
-    if (sectorParam) setFilters(prev => ({ ...prev, sector: sectorParam.split(',') }));
-    if (locationParam) setFilters(prev => ({ ...prev, location: locationParam.split(',') }));
-    if (pageParam) setCurrentPage(parseInt(pageParam));
-  }, [searchParams]);
-
-  useEffect(() => {
-    fetchAccommodationJobs();
-  }, [currentPage, filters, user, userOnboardingData]);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      setUser(session.user);
-    }
-  };
-
-  const fetchUserOnboardingData = async () => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('onboarding_data')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') return;
-
-      if (data) {
-        setUserOnboardingData({
-          target_roles: data.target_roles || [],
-          cv_skills: data.cv_skills || [],
-          preferred_locations: data.preferred_locations || [],
-          experience_level: data.experience_level || null,
-          salary_min: data.salary_min || null,
-          salary_max: data.salary_max || null,
-          job_type: data.job_type || null,
-          sector: data.sector || null,
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching onboarding data:', error);
-    }
-  };
-
-  const fetchAccommodationJobs = async () => {
-  try {
-      setLoading(true);
-
-      const res = await fetch('/api/jobs');
-      if (!res.ok) throw new Error(`Jobs API error: ${res.status}`);
-      const { jobs: allJobs } = await res.json();
-
-      // ── Primary filter ────────────────────────────────────────────────────
-      let filtered = (allJobs || []).filter((job: any) =>
-        job.accommodation_status === 'yes'
-      );
-
-      // ── Search ────────────────────────────────────────────────────────────
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter((job: any) => {
-          const title = (job.title || '').toLowerCase();
-          const company = typeof job.company === 'string'
-            ? job.company.toLowerCase()
-            : (job.company?.name || '').toLowerCase();
-          return title.includes(q) || company.includes(q);
-        });
-        saveSearchHistory(searchQuery.trim(), filtered.length);
-      }
-
-      // ── Sector filter ─────────────────────────────────────────────────────
-      if (filters.sector.length > 0) {
-        filtered = filtered.filter((job: any) => filters.sector.includes(job.sector));
-      }
-      // ── Location filter ───────────────────────────────────────────────────
-      if (filters.location.length > 0) {
-        filtered = filtered.filter((job: any) =>
-          filters.location.some(f => {
-            if (f === 'Remote') return job.location?.remote === true;
-            const city = (job.location?.city || '').toLowerCase();
-            const country = (job.location?.country || '').toLowerCase();
-            const state = (job.location?.state || '').toLowerCase();
-            const fLower = f.toLowerCase();
-            return city.includes(fLower) || country.includes(fLower) || state.includes(fLower);
-          })
-        );
-      }
-
-      // ── Sort + paginate ───────────────────────────────────────────────────
-      filtered.sort((a: any, b: any) =>
-        new Date(b.posted_date || b.created_at || 0).getTime() -
-        new Date(a.posted_date || a.created_at || 0).getTime()
-      );
-
-      const total = filtered.length;
-      setTotalJobs(total);
-      setTotalPages(total > 0 ? Math.ceil(total / JOBS_PER_PAGE) : 1);
-
-      const paginated = filtered.slice(
-        (currentPage - 1) * JOBS_PER_PAGE,
-        currentPage * JOBS_PER_PAGE
-      );
-
-      // ── Match scoring ─────────────────────────────────────────────────────
-      let processedJobs;
-      if (!user || !userOnboardingData) {
-        processedJobs = paginated.map((job: any) => transformJobToUI(job, 0, null));
-      } else {
-        processedJobs = await processJobsWithMatching(paginated);
-      }
-
-      setJobs(processedJobs);
-    } catch (error) {
-      console.error('Error fetching accommodation jobs:', error);
-      setJobs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const processJobsWithMatching = useCallback(async (jobRows: any[]): Promise<JobUI[]> => {
-    if (!userOnboardingData || !user) {
-      return jobRows.map((job: any) => transformJobToUI(job, 0, null));
-    }
-
-    const matchCache = matchCacheService.loadMatchCache(user.id);
-    let cacheNeedsUpdate = false;
-    const updatedCache = { ...matchCache };
-
-    const processedJobs = await Promise.all(
-      jobRows.map(async (job: any) => {
-        try {
-          let matchResult;
-          const cachedMatch = updatedCache[job.id];
-
-          if (cachedMatch) {
-            matchResult = {
-              score: cachedMatch.score,
-              breakdown: cachedMatch.breakdown,
-              computedAt: cachedMatch.cachedAt,
-            };
-          } else {
-            const jobRow: JobRow = {
-              role: job.role || job.title,
-              related_roles: job.related_roles,
-              ai_enhanced_roles: job.ai_enhanced_roles,
-              skills_required: job.skills_required,
-              ai_enhanced_skills: job.ai_enhanced_skills,
-              location: job.location,
-              experience_level: job.experience_level,
-              salary_range: job.salary_range,
-              employment_type: job.employment_type,
-              sector: job.sector,
-            };
-
-            matchResult = scoreJob(jobRow, userOnboardingData);
-
-            updatedCache[job.id] = {
-              score: matchResult.score,
-              breakdown: matchResult.breakdown,
-              cachedAt: matchResult.computedAt,
-            };
-            cacheNeedsUpdate = true;
-          }
-
-          const rsCapped = Math.min(
-            80,
-            matchResult.breakdown.rolesScore +
-            matchResult.breakdown.skillsScore +
-            matchResult.breakdown.sectorScore
-          );
-          const calculatedTotal = Math.round(
-            rsCapped +
-            matchResult.breakdown.locationScore +
-            matchResult.breakdown.experienceScore +
-            matchResult.breakdown.salaryScore +
-            matchResult.breakdown.typeScore
-          );
-
-          return transformJobToUI(job, calculatedTotal, matchResult.breakdown);
-        } catch (error) {
-          return transformJobToUI(job, 0, null);
-        }
-      })
-    );
-
-    if (cacheNeedsUpdate) {
-      matchCacheService.saveMatchCache(user.id, updatedCache);
-    }
-
-    return processedJobs;
-  }, [user, userOnboardingData]);
-
-  const transformJobToUI = (job: any, matchScore: number, breakdown: any): JobUI => {
-    const finalMatchScore = user ? matchScore : 0;
-    const finalBreakdown = user ? breakdown : null;
-    
-    let locationStr = 'Location not specified';
-    if (typeof job.location === 'string') {
-      locationStr = job.location;
-    } else if (job.location && typeof job.location === 'object') {
-      if (job.location.remote) {
-        locationStr = 'Remote';
-      } else {
-        const parts = [job.location.city, job.location.state, job.location.country].filter(Boolean);
-        locationStr = parts.length > 0 ? parts.join(', ') : 'Location not specified';
-      }
-    }
-    
-    let companyStr = 'Unknown Company';
-    if (typeof job.company === 'string') {
-      companyStr = job.company;
-    } else if (job.company && typeof job.company === 'object') {
-      companyStr = job.company.name || 'Unknown Company';
-    }
-
-    let salaryStr = '';
-    if (typeof job.salary === 'string') {
-      salaryStr = job.salary;
-    } else if (job.salary_range && typeof job.salary_range === 'object') {
-      const sal = job.salary_range;
-      if (sal.min !== null && sal.currency) {
-        salaryStr = `${sal.currency} ${sal.min.toLocaleString()} ${sal.period || ''}`.trim();
-      }
-    }
-
-    return {
-      id: job.id,
-      slug: job.slug || job.id,
-      title: job.title || 'Untitled Job',
-      company: companyStr,
-      location: locationStr,
-      salary: salaryStr,
-      match: finalMatchScore,
-      calculatedTotal: finalMatchScore,
-      type: job.type || job.employment_type || '',
-      breakdown: finalBreakdown,
-      postedDate: job.posted_date || job.created_at || null,
-    };
-  };
-
-  const loadSavedJobs = () => {
-    if (typeof window === 'undefined') return;
-    const saved = localStorage.getItem(STORAGE_KEYS.SAVED_JOBS);
-    if (saved) {
-      try {
-        setSavedJobs(JSON.parse(saved));
-      } catch (e) {}
-    }
-  };
-
-  const loadAppliedJobs = () => {
-    if (typeof window === 'undefined') return;
-    const applied = localStorage.getItem(STORAGE_KEYS.APPLIED_JOBS);
-    if (applied) {
-      try {
-        setAppliedJobs(JSON.parse(applied));
-      } catch (e) {}
-    }
-  };
-
-  const handleSave = (jobId: string) => {
-    const newSaved = savedJobs.includes(jobId)
-      ? savedJobs.filter(id => id !== jobId)
-      : [...savedJobs, jobId];
-    setSavedJobs(newSaved);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.SAVED_JOBS, JSON.stringify(newSaved));
-    }
-  };
-
-  const handleApply = (jobId: string) => {
-    const newApplied = appliedJobs.includes(jobId)
-      ? appliedJobs.filter(id => id !== jobId)
-      : [...appliedJobs, jobId];
-    setAppliedJobs(newApplied);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.APPLIED_JOBS, JSON.stringify(newApplied));
-    }
-  };
-
-  const handleShowBreakdown = (job: JobUI) => {
-    const breakdown = job.breakdown || {
-      rolesScore: 0, skillsScore: 0, sectorScore: 0,
-      locationScore: 0, experienceScore: 0, salaryScore: 0, typeScore: 0,
-    };
-    setMatchModalData({
-      breakdown,
-      totalScore: job.calculatedTotal || job.match || 0,
-      jobTitle: job.title,
-      companyName: job.company,
-    });
-    setMatchModalOpen(true);
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1);
-    updateURL();
-    if (searchQuery.trim()) {
-      saveSearchHistory(searchQuery.trim(), 0);
-    }
-  };
-
-  const saveSearchHistory = async (query: string, resultsCount: number) => {
-    try {
-      await supabase.from('search_history').insert({
-        user_id: user?.id || null,
-        search_query: query,
-        results_count: resultsCount,
-      });
-    } catch (error) {
-      console.error('Error saving search history:', error);
-    }
-  };
-
-  const updateURL = () => {
-    const params = new URLSearchParams();
-    if (searchQuery) params.set('search', searchQuery);
-    if (filters.sector.length > 0) params.set('sector', filters.sector.join(','));
-    if (filters.location.length > 0) params.set('location', filters.location.join(','));
-    if (currentPage > 1) params.set('page', currentPage.toString());
-    router.push(`/tools/accommodation-finder?${params.toString()}`);
-  };
-
-  const handleFilterChange = (filterType: 'sector' | 'location', value: string) => {
-    setFilters(prev => {
-      const current = prev[filterType];
-      const updated = current.includes(value)
-        ? current.filter(v => v !== value)
-        : [...current, value];
-      return { ...prev, [filterType]: updated };
-    });
-    setCurrentPage(1);
-  };
-
-  const clearFilters = () => {
-    setFilters({ sector: [], location: [] });
-    setSearchQuery('');
-    setCurrentPage(1);
-    router.push('/tools/accommodation-finder');
-  };
-
-  const sortedJobs = [...jobs].sort((a, b) => {
-    if (sortBy === 'match') {
-      return (b.calculatedTotal || b.match || 0) - (a.calculatedTotal || a.match || 0);
-    }
-    const dateA = new Date(a.postedDate || 0).getTime();
-    const dateB = new Date(b.postedDate || 0).getTime();
-    return dateB - dateA;
-  });
-
-  const hasFilters = searchQuery || filters.sector.length > 0 || filters.location.length > 0;
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
       {/* Header */}
@@ -488,194 +54,8 @@ export default function AccommodationFinderPage() {
       </div>
 
       <div className="px-4 md:px-6 py-6 max-w-7xl mx-auto">
-        {/* Search */}
-        <div className="bg-white rounded-2xl p-4 mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
-          <form onSubmit={handleSearch}>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search jobs with accommodation..."
-                className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center justify-center"
-              >
-                <Search size={18} />
-              </button>
-            </div>
-          </form>
-
-          {/* Filters Panel */}
-          {filtersOpen && (
-            <div className="pt-4 border-t space-y-4">
-              {/* Sector Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sector</label>
-                <div className="flex flex-wrap gap-2">
-                  {sectors.map(sector => (
-                    <button
-                      key={sector}
-                      onClick={() => handleFilterChange('sector', sector)}
-                      className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                        filters.sector.includes(sector)
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {sector}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Location Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <div className="flex flex-wrap gap-2">
-                  {locations.map(location => (
-                    <button
-                      key={location}
-                      onClick={() => handleFilterChange('location', location)}
-                      className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                        filters.location.includes(location)
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {location}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              {hasFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
-                >
-                  <X size={14} /> Clear all filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Results Summary */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-gray-600">
-            {loading ? 'Loading...' : `${totalJobs.toLocaleString()} jobs with accommodation found`}
-            {hasFilters && ` (filtered)`}
-          </p>
-          <div className="flex items-center gap-3">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'match' | 'date')}
-              className="text-sm border border-gray-300 rounded-md px-3 py-1.5 outline-none cursor-pointer"
-            >
-              <option value="date">Newest First</option>
-              {user && <option value="match">Best Match</option>}
-            </select>
-          </div>
-        </div>
-
-        {/* Jobs List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="divide-y" style={{ borderColor: theme.colors.border.DEFAULT }}>
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <p style={{ color: theme.colors.text.secondary }}>Loading jobs with accommodation...</p>
-              </div>
-            ) : sortedJobs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-6">
-                <Home size={48} className="text-gray-400 mb-4" />
-                <p className="text-base font-medium mb-2" style={{ color: theme.colors.text.primary }}>
-                  No jobs with accommodation found
-                </p>
-                <p className="text-sm text-center" style={{ color: theme.colors.text.secondary }}>
-                  {hasFilters ? 'Try adjusting your filters' : 'Check back later for new opportunities with accommodation'}
-                </p>
-                {hasFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="mt-4 text-blue-600 hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-            ) : (
-              sortedJobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  savedJobs={savedJobs}
-                  appliedJobs={appliedJobs}
-                  onSave={handleSave}
-                  onApply={handleApply}
-                  onShowBreakdown={handleShowBreakdown}
-                  showMatch={false}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={() => { setCurrentPage(Math.max(1, currentPage - 1)); updateURL(); }}
-              disabled={currentPage === 1}
-              className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              Previous
-            </button>
-            
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum: number;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => { setCurrentPage(pageNum); updateURL(); }}
-                    className={`px-4 py-2 rounded-lg ${
-                      currentPage === pageNum
-                        ? 'bg-blue-600 text-white'
-                        : 'border hover:bg-gray-50'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-            </div>
-            
-            <span className="px-4 py-2 text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
-            </span>
-            
-            <button
-              onClick={() => { setCurrentPage(Math.min(totalPages, currentPage + 1)); updateURL(); }}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              Next
-            </button>
-          </div>
-        )}
+        {/* Client Island */}
+        <AccommodationFinderClient />
 
         {/* ── Related Tools ── */}
         <div className="mt-12 mb-8">
@@ -720,7 +100,7 @@ export default function AccommodationFinderPage() {
               Jobs with Accommodation Finder: Discover Jobs That Provide Housing, Jobs with Room and Board, and Jobs Abroad with Accommodation in 2026
             </h2>
             <p className="text-gray-600 leading-relaxed mb-6">
-              Searching for jobs with accommodation can completely transform your financial situation and career trajectory — especially if you're relocating, starting fresh, or simply want to eliminate housing costs. The Jobs with Accommodation Finder is the most comprehensive tool for discovering jobs that provide housing, jobs with housing included, jobs that offer housing benefits, and jobs that pay to relocate and provide housing. Whether you're looking for warehouse jobs near me, care homes jobs, seasonal roles abroad, or housing management positions, this platform connects you with verified listings that match your skills and location — including Lagos, Abuja, Port Harcourt, and opportunities worldwide.
+              Searching for jobs with accommodation can completely transform your financial situation and career trajectory — especially if you&apos;re relocating, starting fresh, or simply want to eliminate housing costs. The Jobs with Accommodation Finder is the most comprehensive tool for discovering jobs that provide housing, jobs with housing included, jobs that offer housing benefits, and jobs that pay to relocate and provide housing. Whether you&apos;re looking for warehouse jobs near me, care homes jobs, seasonal roles abroad, or housing management positions, this platform connects you with verified listings that match your skills and location — including Lagos, Abuja, Port Harcourt, and opportunities worldwide.
             </p>
 
             <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Why Jobs with Housing Included Are Worth Pursuing in 2026</h3>
@@ -731,7 +111,7 @@ export default function AccommodationFinderPage() {
               Jobs that provide housing for employees are common in sectors like warehousing and logistics, healthcare and care homes, hospitality, property management, seasonal tourism, and international placements. Both experienced professionals and no-experience seekers can access them — from entry-level warehouse jobs with dorm accommodation to senior house manager jobs with private quarters included.
             </p>
             <p className="text-gray-600 leading-relaxed mb-6">
-              The Jobs with Accommodation Finder aggregates all of these listings into one searchable platform, with real-time filters for sector, location, experience level, and whether housing is fully free or subsidized. It's the most targeted internship and jobs-with-housing search engine for Nigerian and global candidates in 2026.
+              The Jobs with Accommodation Finder aggregates all of these listings into one searchable platform, with real-time filters for sector, location, experience level, and whether housing is fully free or subsidized. It&apos;s the most targeted internship and jobs-with-housing search engine for Nigerian and global candidates in 2026.
             </p>
 
             <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Top Industries Offering Jobs with Accommodation</h3>
@@ -741,7 +121,7 @@ export default function AccommodationFinderPage() {
               Warehouse jobs and warehouse jobs near me consistently rank among the highest-searched roles for jobs with room and board. Employers such as Amazon, DHL, and major Nigerian logistics firms provide shared dormitory-style housing near facilities for warehouse manager positions and entry-level picking, packing, and sorting roles. Benefits often include free utilities and staff transport. Salaries start around ₦80,000–₦150,000/month locally or $15–25/hour USD for international warehouse work positions.
             </p>
             <p className="text-gray-600 leading-relaxed mb-4">
-              No experience? Target warehouse jobs near me that include on-the-job training programs — many of these roles are specifically designed for first-time workers and include accommodation as an incentive. Warehouse work in logistics hubs is one of the fastest entry points into the formal job market for anyone searching "jobs with housing included no experience."
+              No experience? Target warehouse jobs near me that include on-the-job training programs — many of these roles are specifically designed for first-time workers and include accommodation as an incentive. Warehouse work in logistics hubs is one of the fastest entry points into the formal job market for anyone searching &quot;jobs with housing included no experience.&quot;
             </p>
 
             <h4 className="text-lg font-semibold text-gray-800 mt-6 mb-2">Care Homes Jobs and Senior Living Opportunities</h4>
@@ -749,7 +129,7 @@ export default function AccommodationFinderPage() {
               Care homes jobs near me and care homes near me with vacancies are among the most reliable sources for live-in employment. Roles covering caregiving, nursing support, care home cleaning jobs, and home support worker jobs frequently include private or shared on-site rooms in retirement homes and senior living facilities. Organizations like Anchor Care Homes advertise Anchor Care Homes jobs with full room-and-board packages, meals, and utility coverage.
             </p>
             <p className="text-gray-600 leading-relaxed mb-4">
-              Senior home care jobs and retirement home jobs near me suit compassionate and patient individuals. They are particularly accessible for candidates with minimal formal experience — care at home jobs and senior living jobs near me frequently list "no prior care experience required" alongside their housing benefits. Expected compensation ranges from £11–£16/hour in the UK or equivalent international rates, plus the value of free accommodation.
+              Senior home care jobs and retirement home jobs near me suit compassionate and patient individuals. They are particularly accessible for candidates with minimal formal experience — care at home jobs and senior living jobs near me frequently list &quot;no prior care experience required&quot; alongside their housing benefits. Expected compensation ranges from £11–£16/hour in the UK or equivalent international rates, plus the value of free accommodation.
             </p>
 
             <h4 className="text-lg font-semibold text-gray-800 mt-6 mb-2">Hospitality, Coffee Shops, and Food Service</h4>
@@ -812,11 +192,11 @@ export default function AccommodationFinderPage() {
             <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">How the Jobs with Accommodation Finder Works</h3>
             <p className="text-gray-600 leading-relaxed mb-3">Using the tool is straightforward and takes under two minutes to get your first results:</p>
             <ol className="list-decimal pl-6 space-y-3 text-gray-600 mb-6">
-              <li><strong>Search by Keyword:</strong> Enter terms like "jobs with housing," "jobs that provide housing for employees," "warehouse jobs near me," or "care homes job vacancies near me" to surface targeted results.</li>
-              <li><strong>Apply Filters:</strong> Narrow down by sector (Healthcare, Logistics, Hospitality), location (Lagos, Abuja, Remote), or experience level ("jobs with housing included no experience" mode for beginners).</li>
+              <li><strong>Search by Keyword:</strong> Enter terms like &quot;jobs with housing,&quot; &quot;jobs that provide housing for employees,&quot; &quot;warehouse jobs near me,&quot; or &quot;care homes job vacancies near me&quot; to surface targeted results.</li>
+              <li><strong>Apply Filters:</strong> Narrow down by sector (Healthcare, Logistics, Hospitality), location (Lagos, Abuja, Remote), or experience level (&quot;jobs with housing included no experience&quot; mode for beginners).</li>
               <li><strong>Review Listings:</strong> Each result shows salary, housing benefit type (free vs. subsidized), accommodation details, and direct apply links — no guessing involved.</li>
-              <li><strong>Save and Apply:</strong> Bookmark your favorites and apply directly. Set alerts for new "jobs that offer housing" listings in your target sector so you're always first to apply.</li>
-              <li><strong>Track Progress:</strong> Monitor all applications in your dashboard, from cleaning company hiring near me submissions to housing association jobs you've shortlisted.</li>
+              <li><strong>Save and Apply:</strong> Bookmark your favorites and apply directly. Set alerts for new &quot;jobs that offer housing&quot; listings in your target sector so you&apos;re always first to apply.</li>
+              <li><strong>Track Progress:</strong> Monitor all applications in your dashboard, from cleaning company hiring near me submissions to housing association jobs you&apos;ve shortlisted.</li>
             </ol>
             <p className="text-gray-600 leading-relaxed mb-6">
               The platform is powered by real-time data and covers a wide range of roles — from home cleaning jobs near me, house cleaning jobs, and home sitter jobs near me to private home help jobs and in-house legal jobs. For Lagos users specifically, the tool surfaces hyper-local listings alongside international opportunities for full coverage.
@@ -837,27 +217,27 @@ export default function AccommodationFinderPage() {
             <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Real-World Examples of Jobs with Housing Included</h3>
             <div className="space-y-4 mb-8">
               <blockquote className="border-l-4 border-teal-500 pl-4 py-1 bg-teal-50 rounded-r-xl">
-                <p className="text-gray-700 italic">"Found a warehouse job near me that included free accommodation and transport. I saved ₦800,000 in rent in my first year — it completely changed my financial situation."</p>
+                <p className="text-gray-700 italic">&quot;Found a warehouse job near me that included free accommodation and transport. I saved ₦800,000 in rent in my first year — it completely changed my financial situation.&quot;</p>
                 <cite className="text-sm text-gray-500 mt-1 block">— Emeka, Warehouse Operative, Lagos</cite>
               </blockquote>
               <blockquote className="border-l-4 border-blue-500 pl-4 py-1 bg-blue-50 rounded-r-xl">
-                <p className="text-gray-700 italic">"I searched 'care homes jobs near me with housing' and found a live-in caregiver role in the UK within two weeks. The room and board package made it worth relocating from Nigeria."</p>
+                <p className="text-gray-700 italic">&quot;I searched &apos;care homes jobs near me with housing&apos; and found a live-in caregiver role in the UK within two weeks. The room and board package made it worth relocating from Nigeria.&quot;</p>
                 <cite className="text-sm text-gray-500 mt-1 block">— Blessing, Live-in Caregiver, UK</cite>
               </blockquote>
               <blockquote className="border-l-4 border-purple-500 pl-4 py-1 bg-purple-50 rounded-r-xl">
-                <p className="text-gray-700 italic">"Got a seasonal job with housing in a resort — six months of free accommodation plus salary. I came back with more savings than I'd managed in three years of renting."</p>
+                <p className="text-gray-700 italic">&quot;Got a seasonal job with housing in a resort — six months of free accommodation plus salary. I came back with more savings than I&apos;d managed in three years of renting.&quot;</p>
                 <cite className="text-sm text-gray-500 mt-1 block">— Adaeze, Seasonal Resort Worker, Portugal</cite>
               </blockquote>
             </div>
 
             <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Tips for Landing Jobs with Accommodation</h3>
             <ul className="list-disc pl-6 space-y-2 text-gray-600 mb-6">
-              <li><strong>Tailor Your Resume:</strong> Include keywords like "jobs that provide housing," "live-in role," and "accommodation included" in your profile so employers searching for flexible candidates find you first.</li>
+              <li><strong>Tailor Your Resume:</strong> Include keywords like &quot;jobs that provide housing,&quot; &quot;live-in role,&quot; and &quot;accommodation included&quot; in your profile so employers searching for flexible candidates find you first.</li>
               <li><strong>Apply Early:</strong> Seasonal jobs with housing and jobs abroad with accommodation fill quickly — set real-time alerts and apply the day listings go live.</li>
               <li><strong>Highlight Reliability:</strong> Employers offering housing want dependable staff who will commit. Emphasize stability and long-term interest in your cover letters for house manager jobs near me, care homes jobs, or warehouse work.</li>
               <li><strong>Check Visa Requirements:</strong> For jobs abroad with accommodation, confirm eligibility before applying. Many international roles require specific work permits — the platform flags visa sponsorship availability where relevant.</li>
               <li><strong>Network for Niche Roles:</strong> In-house lawyer jobs, in-house legal jobs, and housing association jobs are often filled via referral. Connect with professionals in those industries on LinkedIn while using the finder for broad coverage.</li>
-              <li><strong>Consider Location Flexibility:</strong> The best jobs with housing included are often in non-central locations — logistics hubs, care facilities, or rural resorts. Being open to "warehouse jobs near me" outside major cities significantly expands your options.</li>
+              <li><strong>Consider Location Flexibility:</strong> The best jobs with housing included are often in non-central locations — logistics hubs, care facilities, or rural resorts. Being open to &quot;warehouse jobs near me&quot; outside major cities significantly expands your options.</li>
             </ul>
 
             <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Jobs with Accommodation in Nigeria — Local Opportunities</h3>
@@ -865,7 +245,7 @@ export default function AccommodationFinderPage() {
               Within Nigeria, jobs with accommodation span sectors including logistics warehouses in Lagos and Ogun State, care and home support roles in Abuja and Port Harcourt, domestic staffing (private home help jobs, home sitter jobs near me) for high-net-worth households, and property management roles in gated estates. Many hospitality businesses — hotels, resorts, and serviced apartments — also provide staff housing.
             </p>
             <p className="text-gray-600 leading-relaxed mb-6">
-              The Jobs with Accommodation Finder specifically surfaces these local Nigerian listings alongside international roles, making it the only platform you need whether you're searching for jobs with housing included locally or planning to relocate abroad with accommodation provided.
+              The Jobs with Accommodation Finder specifically surfaces these local Nigerian listings alongside international roles, making it the only platform you need whether you&apos;re searching for jobs with housing included locally or planning to relocate abroad with accommodation provided.
             </p>
 
             <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Frequently Asked Questions About Jobs with Accommodation</h3>
@@ -966,12 +346,6 @@ export default function AccommodationFinderPage() {
               }
             ])
           }}
-        />
-
-        <MatchBreakdownModal
-          open={matchModalOpen}
-          onClose={() => setMatchModalOpen(false)}
-          data={matchModalData}
         />
       </div>
     </div>

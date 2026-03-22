@@ -1,10 +1,18 @@
+// ─── File: page.tsx ───────────────────────────────────────────────────────────
+// Path: app/jobs/remote/[category]/page.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { ArrowLeft, Briefcase, Globe, Laptop, DollarSign, MapPin, Wrench, ChevronRight } from 'lucide-react';
-import CategoryJobList from '@/components/category/CategoryJobList';
+import { ArrowLeft, Briefcase, Globe, DollarSign, MapPin, Wrench, ChevronRight, Laptop } from 'lucide-react';
+import CategoryJobList, { RawJobRow } from '@/components/category/CategoryJobList';
 import RemoteCategoryContent from '@/components/category/RemoteCategoryContent';
+
+// Cache forever — clears on deploy or on-demand revalidation
+export const revalidate = false;
+export const dynamicParams = true;
 
 interface RemoteCategory {
   id: string;
@@ -53,7 +61,6 @@ async function getRemoteCategory(slug: string): Promise<RemoteCategory | null> {
       .eq('slug', slug)
       .eq('is_active', true)
       .single();
-
     if (error || !data) return null;
     return data;
   } catch (error) {
@@ -67,6 +74,29 @@ async function incrementViewCount(slug: string) {
     await supabase.rpc('increment_remote_category_views', { category_slug: slug });
   } catch (error) {
     console.error('Error incrementing view count:', error);
+  }
+}
+
+// Fetch initial jobs server-side so Googlebot sees real job listings in HTML
+async function getInitialJobs(page: RemoteCategory): Promise<RawJobRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('id, slug, title, company, location, salary_range, employment_type, posted_date, created_at')
+      .in('status', ['active', 'expired', 'expired_indexed'])
+      .eq('job_type', 'Remote')
+      .eq('role_category', page.name)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('Error fetching initial remote jobs:', error);
+      return [];
+    }
+    return (data as RawJobRow[]) || [];
+  } catch (error) {
+    console.error('Error fetching initial remote jobs:', error);
+    return [];
   }
 }
 
@@ -99,10 +129,7 @@ async function fetchRelatedCategories(page: RemoteCategory): Promise<RelatedCate
 
 export async function generateMetadata({ params }: { params: { category: string } }): Promise<Metadata> {
   const page = await getRemoteCategory(params.category);
-
-  if (!page) {
-    return { title: 'Remote Category Not Found | JobMeter' };
-  }
+  if (!page) return { title: 'Remote Category Not Found | JobMeter' };
 
   const title = page.meta_title || `Remote ${page.name} Jobs - Work From Home | JobMeter`;
   const description = page.meta_description || page.description || `Find remote ${page.name} jobs. Work from anywhere.`;
@@ -125,7 +152,6 @@ export async function generateStaticParams() {
       .from('remote_categories')
       .select('slug')
       .eq('is_active', true);
-
     if (!data) return [];
     return data.map((row) => ({ category: row.slug }));
   } catch (error) {
@@ -138,8 +164,14 @@ export default async function RemoteCategoryPage({ params }: { params: { categor
   const page = await getRemoteCategory(params.category);
   if (!page) notFound();
 
+  // Run in parallel — saves ~2x latency vs sequential awaits
+  const [initialJobs, relatedCategories] = await Promise.all([
+    getInitialJobs(page),
+    fetchRelatedCategories(page),
+  ]);
+
+  // Non-blocking — fire and forget
   incrementViewCount(params.category);
-  const relatedCategories = await fetchRelatedCategories(page);
 
   const h1 = page.h1_title || `Remote ${page.name} Jobs`;
   const description = page.meta_description || page.description || '';
@@ -263,13 +295,14 @@ export default async function RemoteCategoryPage({ params }: { params: { categor
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Job listings */}
+            {/* Job listings — initialJobs pre-fetched server-side for Googlebot */}
             <div className="lg:col-span-2">
               <CategoryJobList
                 category=""
                 location={null}
                 jobType="Remote"
                 roleCategory={page.name}
+                initialJobs={initialJobs}
               />
             </div>
 

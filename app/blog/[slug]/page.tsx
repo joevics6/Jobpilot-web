@@ -7,7 +7,7 @@ import { ArrowLeft, Calendar, Eye, Clock, Share2 } from 'lucide-react';
 import { ArticleSchema, FAQSchema } from '@/components/seo/StructuredData';
 import BlogMarkdownRenderer from '@/components/BlogMarkdownRenderer';
 
-export const revalidate = 86400; // 24 hours - blog posts rarely change
+export const revalidate = false;
 
 interface BlogPost {
   id: string;

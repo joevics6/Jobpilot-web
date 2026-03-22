@@ -58,7 +58,7 @@ async function getBlogPosts(): Promise<BlogPost[]> {
   }
 }
 
-export const revalidate = 86400; // 24 hours - blog changes daily
+export const revalidate = false;
 
 export default async function BlogPage() {
   const posts = await getBlogPosts();

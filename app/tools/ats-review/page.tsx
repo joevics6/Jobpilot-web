@@ -1,65 +1,11 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, FileCheck, Clock, TrendingUp, FileText, Search, Briefcase, MessageCircle, GraduationCap, Brain, Shield, Calculator } from 'lucide-react';
 import Link from 'next/link';
+import { ArrowLeft, FileCheck, FileText, Search, Shield, Calculator, MessageCircle, GraduationCap, Brain, Briefcase } from 'lucide-react';
 import { theme } from '@/lib/theme';
-import { supabase } from '@/lib/supabase';
-import ATSReviewModal from '@/components/tools/ATSReviewModal';
-import AuthModal from '@/components/AuthModal';
+import ATSReviewClient from './ATSReviewClient';
+
+export const revalidate = false;
 
 export default function ATSReviewPage() {
-  const router = useRouter();
-  const [showModal, setShowModal] = useState(false);
-  const [sessionHistory, setSessionHistory] = useState<any[]>([]);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        loadSessionHistory();
-      } else {
-        setAuthModalOpen(true);
-        loadSessionHistory();
-      }
-    } catch (error) {
-      loadSessionHistory();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadSessionHistory = () => {
-    try {
-      const history = localStorage.getItem('ats_cv_review_history');
-      if (history) {
-        const sessions = JSON.parse(history);
-        setSessionHistory(sessions);
-      }
-    } catch (error) {
-      console.error('Error loading session history:', error);
-    }
-  };
-
-  const handleModalClose = () => {
-    setShowModal(false);
-    // Reload history after modal closes (in case a new review was created)
-    setTimeout(() => loadSessionHistory(), 100);
-  };
-
-  const getScoreColor = (score: number): string => {
-    if (score >= 80) return theme.colors.match.good;
-    if (score >= 60) return theme.colors.match.average;
-    return theme.colors.match.bad;
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -67,25 +13,15 @@ export default function ATSReviewPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link
-                href="/tools"
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <Link href="/tools" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <ArrowLeft size={20} className="text-gray-600" />
               </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">ATS CV Review</h1>
-                <p className="text-sm text-gray-600">
-                  Check the Suitability of your CV for a Role
-                </p>
+                <p className="text-sm text-gray-600">Check the Suitability of your CV for a Role</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <Plus size={20} />
-            </button>
+            <div className="w-10 h-10" />
           </div>
         </div>
       </div>
@@ -115,93 +51,10 @@ export default function ATSReviewPage() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Client Island */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {sessionHistory.length > 0 ? (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Reviews</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sessionHistory.map((session) => {
-                const date = new Date(session.timestamp);
-                const scoreColor = getScoreColor(session.overallScore);
-
-                return (
-                  <div
-                    key={session.id}
-                    className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => router.push(`/tools/ats-review/${session.id}`)}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <FileCheck size={24} className="text-green-600" />
-                          <div>
-                            <h3 className="font-semibold text-gray-900 text-lg">
-                              {session.cvName}
-                            </h3>
-                            <span className="text-sm text-gray-600">
-                              {session.reviewType === 'cv-job' ? 'Job-Specific Review' : 'General ATS Review'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div
-                            className="text-3xl font-bold"
-                            style={{ color: scoreColor }}
-                          >
-                            {session.overallScore}%
-                          </div>
-                          <div className="text-xs text-gray-500">ATS Score</div>
-                        </div>
-                      </div>
-                        {session.jobTitle && (
-                          <p className="text-sm text-gray-600 mb-3">
-                            <strong>Job:</strong> {session.jobTitle}
-                            {session.jobCompany && ` at ${session.jobCompany}`}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <Clock size={14} />
-                            <span>{date.toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <FileCheck size={64} className="mx-auto text-gray-400 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Reviews Yet</h2>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Start your first ATS CV review to optimize your resume for better job matching and ATS compatibility.
-            </p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-semibold"
-            >
-              <Plus size={20} />
-              Start Your First Review
-            </button>
-          </div>
-        )}
+        <ATSReviewClient />
       </div>
-
-      {/* ATS Review Modal */}
-      <ATSReviewModal
-        isOpen={showModal}
-        onClose={handleModalClose}
-      />
 
       {/* Related Tools */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -209,7 +62,6 @@ export default function ATSReviewPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Related Tools</h2>
           <p className="text-gray-600 mb-6">Explore more tools to supercharge your job search and career growth.</p>
 
-          {/* CV Tools */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <FileText size={20} style={{ color: '#2563EB' }} />
@@ -238,7 +90,6 @@ export default function ATSReviewPage() {
             </div>
           </div>
 
-          {/* Career Tools */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Briefcase size={20} style={{ color: '#F59E0B' }} />
@@ -285,7 +136,6 @@ export default function ATSReviewPage() {
             </div>
           </div>
 
-          {/* Safety Tools */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Shield size={20} style={{ color: '#EF4444' }} />
@@ -314,7 +164,6 @@ export default function ATSReviewPage() {
             </div>
           </div>
 
-          {/* Salary Tools */}
           <div className="mb-2">
             <div className="flex items-center gap-2 mb-4">
               <Calculator size={20} style={{ color: '#3B82F6' }} />
@@ -546,31 +395,11 @@ export default function ATSReviewPage() {
               "@context": "https://schema.org",
               "@type": "FAQPage",
               "mainEntity": [
-                {
-                  "@type": "Question",
-                  "name": "What is the best free ATS resume checker?",
-                  "acceptedAnswer": { "@type": "Answer", "text": "ATS CV Review is consistently top-rated for instant, detailed ATS scans with no sign-up required, covering keyword matching, formatting compliance, section scoring, and AI-powered suggestions for free." }
-                },
-                {
-                  "@type": "Question",
-                  "name": "How do I check my resume for ATS compatibility?",
-                  "acceptedAnswer": { "@type": "Answer", "text": "Upload your PDF or DOCX or paste plain text into our free ATS checker, optionally add the job description, and receive your ATS score and fix recommendations in under 60 seconds." }
-                },
-                {
-                  "@type": "Question",
-                  "name": "Is there a truly free ATS resume checker?",
-                  "acceptedAnswer": { "@type": "Answer", "text": "Yes — ATS CV Review offers unlimited free ATS resume checker online use with no subscription, no credit card, and no hidden limits." }
-                },
-                {
-                  "@type": "Question",
-                  "name": "What is a good ATS resume score?",
-                  "acceptedAnswer": { "@type": "Answer", "text": "An ATS score of 80 or above indicates strong ATS compatibility. Aim for 85+ for competitive job applications." }
-                },
-                {
-                  "@type": "Question",
-                  "name": "What if my ATS score is low?",
-                  "acceptedAnswer": { "@type": "Answer", "text": "Follow the specific fix suggestions in your report, update your CV, and re-scan. Most users see a 20–30 point score improvement after implementing the recommendations." }
-                }
+                { "@type": "Question", "name": "What is the best free ATS resume checker?", "acceptedAnswer": { "@type": "Answer", "text": "ATS CV Review is consistently top-rated for instant, detailed ATS scans with no sign-up required, covering keyword matching, formatting compliance, section scoring, and AI-powered suggestions for free." } },
+                { "@type": "Question", "name": "How do I check my resume for ATS compatibility?", "acceptedAnswer": { "@type": "Answer", "text": "Upload your PDF or DOCX or paste plain text into our free ATS checker, optionally add the job description, and receive your ATS score and fix recommendations in under 60 seconds." } },
+                { "@type": "Question", "name": "Is there a truly free ATS resume checker?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — ATS CV Review offers unlimited free ATS resume checker online use with no subscription, no credit card, and no hidden limits." } },
+                { "@type": "Question", "name": "What is a good ATS resume score?", "acceptedAnswer": { "@type": "Answer", "text": "An ATS score of 80 or above indicates strong ATS compatibility. Aim for 85+ for competitive job applications." } },
+                { "@type": "Question", "name": "What if my ATS score is low?", "acceptedAnswer": { "@type": "Answer", "text": "Follow the specific fix suggestions in your report, update your CV, and re-scan. Most users see a 20–30 point score improvement after implementing the recommendations." } }
               ]
             })
           }}
@@ -611,8 +440,6 @@ export default function ATSReviewPage() {
           }}
         />
       </div>
-
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }

@@ -1,9 +1,17 @@
 // 📁 app/tools/quiz/page.tsx
 import React from 'react';
-import Link from 'next/link';
+import { Metadata } from 'next';
 import { COMPANIES } from '@/lib/quizCompanies';
 import CompanyCard from './CompanyCard';
 import { theme } from '@/lib/theme';
+
+export const revalidate = false;
+
+export const metadata: Metadata = {
+  title: 'Quiz Platform — Aptitude Test Practice | JobMeter',
+  description: 'Practice aptitude tests from top companies worldwide. Timed mock tests for KPMG, Deloitte, PwC, EY, Google, Amazon, Goldman Sachs, and 100+ employers. Free objective MCQ and AI-graded theory essays.',
+  keywords: ['aptitude test practice', 'KPMG aptitude test', 'Deloitte recruitment test', 'PwC aptitude test', 'aptitude test Nigeria', 'graduate trainee assessment', 'job aptitude test', 'online aptitude test'],
+};
 
 const faqSchema = {
   "@context": "https://schema.org",
@@ -259,6 +267,80 @@ export default function QuizPage() {
       </div>
 
     </div>
+      {/* SEO Content */}
+      <div className="bg-white border-t border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
+          <div className="prose prose-sm max-w-none text-gray-600">
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Recruitment Assessment Practice Tests: Ace Aptitude Tests from Top Companies Worldwide
+            </h2>
+            <p className="mb-6">
+              Practice <strong>aptitude tests from top companies</strong> on our Quiz Platform — the global resource for graduate trainees and job seekers preparing for recruitment assessments at the Big 4, Fortune 500s, multinationals, and public agencies across the US, UK, Canada, EU, and beyond. Whether you're sitting a <strong>KPMG graduate trainee aptitude test</strong>, a <strong>Deloitte recruitment test</strong>, or a <strong>PwC technical assessment</strong>, our platform gives you real-exam-style practice that builds speed, accuracy, and confidence.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Why Aptitude Test Practice Matters</h3>
+            <p className="mb-4">
+              Aptitude tests are now standard in graduate recruitment across virtually every major industry. Leading firms use them to screen thousands of applications quickly, measuring candidates on numerical reasoning, verbal reasoning, logical and inductive reasoning, situational judgment (SJTs), and diagrammatic reasoning.
+            </p>
+            <p className="mb-6">
+              At firms like KPMG, the numerical and verbal sections each contain 24 questions in 20 minutes. At EY, the One Assessment delivers roughly 8 questions in 6 minutes per sub-section. Rejection rates at top firms can reach 50–80% at the screening stage — consistent, targeted <strong>aptitude test practice</strong> is the single most effective way to improve your odds. Users on our platform report doubling their interview invite rate after completing just 10 full mock tests.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">KPMG Aptitude Test Practice</h3>
+            <p className="mb-4">
+              Prepare for the <strong>KPMG graduate trainee aptitude test past questions</strong> style with our KPMG profile. Tests cover numerical reasoning (graphs, percentages, ratios), verbal reasoning, and situational judgment, formatted to mirror the <strong>KPMG graduate program test</strong> with 24 questions per 20-minute section. Practice <strong>KPMG aptitude test</strong> questions drawn from past-paper style content used in Nigeria, the UK, and globally.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Deloitte Aptitude Test Practice</h3>
+            <p className="mb-4">
+              Our Deloitte profile covers the full range of <strong>Deloitte aptitude test questions</strong>: numerical reasoning, logical puzzles, data interpretation, and abstract series. Practice mirrors the <strong>Deloitte graduate recruitment test</strong> format used across the US, UK, and EU. Download-ready study content serves as a functional equivalent to sought-after <strong>Deloitte aptitude test questions and answers PDF</strong> packs. Keywords covered: <em>deloitte aptitude questions · deloitte aptitude test questions · deloitte recruitment test · deloitte graduate recruitment test</em>.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">PwC Aptitude Test Practice</h3>
+            <p className="mb-4">
+              Prepare for the <strong>PwC aptitude test</strong> with numerical reasoning, verbal reasoning, and the firm's distinctive <strong>PwC technical assessment</strong> component. Our platform provides <strong>PwC aptitude test questions and answers</strong> in both timed multiple-choice and AI-graded essay formats. Practice packs mirror the content structure of popular <strong>PwC aptitude test questions and answers PDF</strong> resources. Keywords covered: <em>pwc aptitude test practice · pwc aptitude test questions and answers · pwc aptitude test questions and answers pdf · pwc technical assessment</em>.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">EY, Accenture & Other Top Employers</h3>
+            <p className="mb-6">
+              Beyond the Big 4, our platform covers 100+ companies including Accenture, Google, Amazon, Goldman Sachs, JP Morgan, Unilever, Nestlé, Siemens, IBM, TCS, Infosys, Wipro, Capgemini, McKinsey, BCG, Bain, Shell, ExxonMobil, HSBC, Barclays, Citibank, Standard Chartered, Lloyds, Nokia, HP, Maersk, and many more. Regional coverage includes US federal agencies, the UK Civil Service Fast Stream, EPSO for EU institutions, Nigerian SHL/Dragnet formats for NNPC and oil &amp; gas firms, and public sector agencies globally.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Global Coverage</h3>
+            <p className="mb-6">
+              Our platform serves candidates worldwide: the <strong>United States</strong> (Google, Amazon, Goldman Sachs, JP Morgan, US federal agencies), the <strong>United Kingdom</strong> (Big 4, Unilever, Lloyds, UK Civil Service Fast Stream), <strong>Canada</strong> (RBC, TD Bank, Canadian Public Service), the <strong>European Union</strong> (Siemens, Nestlé, EPSO competitions), <strong>Nigeria &amp; West Africa</strong> (KPMG Nigeria, Dangote, NNPC, SHL/Dragnet formats), <strong>India</strong> (TCS, Infosys, campus placement formats), and the <strong>Middle East &amp; Asia-Pacific</strong>.
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Preparation Tips for Aptitude Tests</h3>
+            <p className="mb-2"><strong>Practice daily.</strong> Dedicate 1–2 hours per day in the two to three weeks before your test.</p>
+            <p className="mb-2"><strong>Time yourself from day one.</strong> Working slowly on untimed practice builds false confidence. Practice under real exam pressure from your first session.</p>
+            <p className="mb-2"><strong>Review every error.</strong> Use our AI feedback to understand not just the correct answer, but why alternative options are wrong.</p>
+            <p className="mb-6"><strong>Simulate full assessments.</strong> Complete both objective and theory sections together to build the stamina needed for a real recruitment day.</p>
+
+            <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Frequently Asked Questions</h3>
+
+            <p className="mb-1"><strong>What is an aptitude test for interview?</strong></p>
+            <p className="mb-4">A timed, standardized assessment used by employers to measure reasoning, problem-solving, and judgment. Used by over 90% of top-tier employers, covering numerical, verbal, logical, and situational judgment sections.</p>
+
+            <p className="mb-1"><strong>How do I access KPMG aptitude test practice?</strong></p>
+            <p className="mb-4">Select KPMG from the company list above for 20 multiple-choice questions styled around the KPMG graduate program test, plus 5 AI-graded theory essays covering numerical, verbal, and SJT content for global and Nigeria-specific recruitment.</p>
+
+            <p className="mb-1"><strong>Where can I find Deloitte aptitude test questions and answers PDF?</strong></p>
+            <p className="mb-4">Our platform provides structured practice equivalent to a Deloitte aptitude test questions and answers PDF, with detailed explanations for every question. Premium members can download practice packs for offline use.</p>
+
+            <p className="mb-1"><strong>What does PwC aptitude test practice include?</strong></p>
+            <p className="mb-4">Numerical reasoning, verbal reasoning, and PwC technical assessment essay questions, AI-graded against the clarity, structure, and insight criteria that assessors look for in real PwC evaluations.</p>
+
+            <p className="mb-1"><strong>Why is a password required for theory tests?</strong></p>
+            <p className="mb-4">The password requirement mirrors the secure, proctored environment of actual recruitment theory tests — just as Deloitte, PwC, and other firms secure their written components.</p>
+
+            <p className="mb-1"><strong>How many questions are in each test?</strong></p>
+            <p className="mb-6">Every test includes <strong>20 objective multiple-choice questions</strong> and <strong>5 theory essay questions</strong>. Objective tests are timed to match real employer conditions. Essays are AI-graded with immediate, structured feedback.</p>
+
+          </div>
+        </div>
+      </div>
     </>
   );
 }

@@ -1,10 +1,20 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import CategoryJobList from '@/components/category/CategoryJobList';
+import CategoryJobList, { RawJobRow } from '@/components/category/CategoryJobList';
 import CategoryContent from '@/components/category/CategoryContent';
 import Link from 'next/link';
 import { ArrowLeft, Briefcase, MapPin } from 'lucide-react';
+
+// Cache forever — page is fully static until a new deploy or on-demand
+// revalidation clears it. This is what Vercel's "cache infinitely" maps to
+// in Next.js: revalidate = false means no automatic time-based rebuild.
+export const revalidate = false;
+
+// Slugs not in generateStaticParams are built on first request, then cached
+// forever the same way (no automatic expiry). A deploy or revalidateTag()
+// call is what clears them.
+export const dynamicParams = true;
 
 interface CategoryPage {
   id: string;
@@ -43,11 +53,7 @@ async function getCategoryPage(slug: string): Promise<CategoryPage | null> {
       .eq('slug', slug)
       .eq('is_published', true)
       .single();
-
-    if (error || !data) {
-      return null;
-    }
-
+    if (error || !data) return null;
     return data;
   } catch (error) {
     console.error('Error fetching category page:', error);
@@ -63,28 +69,47 @@ async function incrementViewCount(slug: string) {
   }
 }
 
+async function getInitialJobs(page: CategoryPage): Promise<RawJobRow[]> {
+  try {
+    let query = supabase
+      .from('jobs')
+      .select('id, slug, title, company, location, salary_range, employment_type, posted_date, created_at')
+      .in('status', ['active', 'expired', 'expired_indexed'])
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    query = query.eq('category', page.category);
+    if (page.location) query = query.eq('location->>state', page.location);
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching initial jobs:', error);
+      return [];
+    }
+    return (data as RawJobRow[]) || [];
+  } catch (error) {
+    console.error('Error fetching initial jobs:', error);
+    return [];
+  }
+}
+
 async function fetchRelatedCategories(page: CategoryPage): Promise<RelatedCategory[]> {
   try {
     const relatedSlugs: string[] = [];
-    
-    // Priority 1: Same town
+
     if (page.town) {
-      const { data: townCategories } = await supabase
+      const { data } = await supabase
         .from('category_pages')
         .select('slug, h1_title, job_count, location, town')
         .eq('town', page.town)
         .eq('is_published', true)
         .neq('slug', page.slug)
         .limit(3);
-      
-      if (townCategories) {
-        townCategories.forEach(cat => relatedSlugs.push(cat.slug));
-      }
+      if (data) data.forEach(cat => relatedSlugs.push(cat.slug));
     }
-    
-    // Priority 2: Same location (state)
+
     if (page.location && relatedSlugs.length < 6) {
-      const { data: locationCategories } = await supabase
+      const { data } = await supabase
         .from('category_pages')
         .select('slug, h1_title, job_count, location, town')
         .eq('location', page.location)
@@ -92,69 +117,49 @@ async function fetchRelatedCategories(page: CategoryPage): Promise<RelatedCatego
         .neq('slug', page.slug)
         .not('slug', 'in', `(${relatedSlugs.join(',')})`)
         .limit(6 - relatedSlugs.length);
-      
-      if (locationCategories) {
-        locationCategories.forEach(cat => relatedSlugs.push(cat.slug));
-      }
+      if (data) data.forEach(cat => relatedSlugs.push(cat.slug));
     }
-    
-    // Priority 3: Related categories from array
-    if (page.related_categories && page.related_categories.length > 0 && relatedSlugs.length < 6) {
-      const remainingSlots = 6 - relatedSlugs.length;
-      const categoriesToFetch = page.related_categories
-        .filter(slug => !relatedSlugs.includes(slug))
-        .slice(0, remainingSlots);
-      
-      if (categoriesToFetch.length > 0) {
-        const { data: relatedCategories } = await supabase
+
+    if (page.related_categories?.length && relatedSlugs.length < 6) {
+      const toFetch = page.related_categories
+        .filter(s => !relatedSlugs.includes(s))
+        .slice(0, 6 - relatedSlugs.length);
+      if (toFetch.length > 0) {
+        const { data } = await supabase
           .from('category_pages')
           .select('slug, h1_title, job_count, location, town')
-          .in('slug', categoriesToFetch)
-          .eq('is_published', true)
-          .limit(remainingSlots);
-        
-        if (relatedCategories) {
-          relatedCategories.forEach(cat => relatedSlugs.push(cat.slug));
-        }
+          .in('slug', toFetch)
+          .eq('is_published', true);
+        if (data) data.forEach(cat => relatedSlugs.push(cat.slug));
       }
     }
-    
-    // Priority 4: Related locations from array
-    if (page.related_locations && page.related_locations.length > 0 && relatedSlugs.length < 6) {
-      const remainingSlots = 6 - relatedSlugs.length;
-      const locationsToFetch = page.related_locations
-        .filter(slug => !relatedSlugs.includes(slug))
-        .slice(0, remainingSlots);
-      
-      if (locationsToFetch.length > 0) {
-        const { data: locationCategories } = await supabase
+
+    if (page.related_locations?.length && relatedSlugs.length < 6) {
+      const toFetch = page.related_locations
+        .filter(s => !relatedSlugs.includes(s))
+        .slice(0, 6 - relatedSlugs.length);
+      if (toFetch.length > 0) {
+        const { data } = await supabase
           .from('category_pages')
           .select('slug, h1_title, job_count, location, town')
-          .in('slug', locationsToFetch)
-          .eq('is_published', true)
-          .limit(remainingSlots);
-        
-        if (locationCategories) {
-          locationCategories.forEach(cat => {
-            if (!relatedSlugs.includes(cat.slug)) {
-              relatedSlugs.push(cat.slug);
-            }
-          });
-        }
+          .in('slug', toFetch)
+          .eq('is_published', true);
+        if (data) data.forEach(cat => {
+          if (!relatedSlugs.includes(cat.slug)) relatedSlugs.push(cat.slug);
+        });
       }
     }
-    
-    // Fetch full details for all collected slugs
+
     if (relatedSlugs.length === 0) return [];
-    
-    const { data: finalCategories } = await supabase
+
+    const { data } = await supabase
       .from('category_pages')
       .select('slug, h1_title, job_count, location, town')
       .in('slug', relatedSlugs)
       .eq('is_published', true)
       .limit(6);
-    
-    return finalCategories || [];
+
+    return data || [];
   } catch (error) {
     console.error('Error fetching related categories:', error);
     return [];
@@ -163,31 +168,21 @@ async function fetchRelatedCategories(page: CategoryPage): Promise<RelatedCatego
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const page = await getCategoryPage(params.slug);
-
-  if (!page) {
-    return {
-      title: 'Category Not Found | JobMeter',
-    };
-  }
+  if (!page) return { title: 'Category Not Found | JobMeter' };
 
   const keywords = page.seo_keywords?.join(', ') || 'jobs, careers, employment';
   const url = `https://jobmeter.app/resources/${page.slug}`;
-  
-  // Add "(Hiring near me)" to meta title for location-specific pages (states and towns)
-  // Only add if total character count stays within reasonable SEO limits (~60-70 chars)
-  const shouldAddNearMe = !!page.location && 
-    (page.meta_title.length + " (Hiring near me)".length) <= 70;
-  const title = shouldAddNearMe 
-    ? `${page.meta_title} (Hiring near me)` 
-    : page.meta_title;
+  const shouldAddNearMe =
+    !!page.location && page.meta_title.length + ' (Hiring near me)'.length <= 70;
+  const title = shouldAddNearMe ? `${page.meta_title} (Hiring near me)` : page.meta_title;
 
   return {
-    title: title,
+    title,
     description: page.meta_description,
     keywords: keywords.split(',').map(k => k.trim()),
     authors: [{ name: 'JobMeter' }],
     openGraph: {
-      title: title,
+      title,
       description: page.meta_description,
       url,
       siteName: 'JobMeter',
@@ -196,12 +191,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     },
     twitter: {
       card: 'summary_large_image',
-      title: title,
+      title,
       description: page.meta_description,
     },
-    alternates: {
-      canonical: url,
-    },
+    alternates: { canonical: url },
   };
 }
 
@@ -210,13 +203,11 @@ export async function generateStaticParams() {
     const { data } = await supabase
       .from('category_pages')
       .select('slug')
-      .eq('is_published', true);
-
+      .eq('is_published', true)
+      .order('job_count', { ascending: false })
+      .limit(200);
     if (!data) return [];
-
-    return data.map((page) => ({
-      slug: page.slug,
-    }));
+    return data.map(page => ({ slug: page.slug }));
   } catch (error) {
     console.error('Error generating static params:', error);
     return [];
@@ -225,18 +216,15 @@ export async function generateStaticParams() {
 
 export default async function CategoryPage({ params }: { params: { slug: string } }) {
   const page = await getCategoryPage(params.slug);
+  if (!page) notFound();
 
-  if (!page) {
-    notFound();
-  }
+  const [initialJobs, relatedCategories] = await Promise.all([
+    getInitialJobs(page),
+    fetchRelatedCategories(page),
+  ]);
 
-  // Increment view count (non-blocking)
   incrementViewCount(params.slug);
 
-  // Fetch related categories for interlinking
-  const relatedCategories = await fetchRelatedCategories(page);
-
-  // Structured data for SEO
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -251,31 +239,15 @@ export default async function CategoryPage({ params }: { params: { slug: string 
     breadcrumb: {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        {
-          '@type': 'ListItem',
-          position: 1,
-          name: 'Home',
-          item: 'https://jobmeter.app',
-        },
-        {
-          '@type': 'ListItem',
-          position: 2,
-          name: 'Categories',
-          item: 'https://jobmeter.app/resources',
-        },
-        {
-          '@type': 'ListItem',
-          position: 3,
-          name: page.h1_title,
-          item: `https://jobmeter.app/resources/${page.slug}`,
-        },
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://jobmeter.app' },
+        { '@type': 'ListItem', position: 2, name: 'Categories', item: 'https://jobmeter.app/resources' },
+        { '@type': 'ListItem', position: 3, name: page.h1_title, item: `https://jobmeter.app/resources/${page.slug}` },
       ],
     },
   };
 
   return (
     <>
-      {/* JSON-LD Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -289,9 +261,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
               {page.location ? <MapPin size={32} /> : <Briefcase size={32} />}
               <h1 className="text-4xl font-bold">{page.h1_title}</h1>
             </div>
-            <p className="text-lg text-white max-w-3xl">
-              {page.meta_description}
-            </p>
+            <p className="text-lg text-white max-w-3xl">{page.meta_description}</p>
             <div className="flex items-center gap-6 mt-4 text-sm">
               <span className="flex items-center gap-2">
                 <Briefcase size={16} />
@@ -323,7 +293,6 @@ export default async function CategoryPage({ params }: { params: { slug: string 
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Back Button */}
           <Link
             href="/resources"
             className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-6 font-medium"
@@ -333,28 +302,23 @@ export default async function CategoryPage({ params }: { params: { slug: string 
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content - Job Listings (2/3 width) */}
             <div className="lg:col-span-2">
-              <CategoryJobList 
-                category={page.category} 
+              <CategoryJobList
+                category={page.category}
                 location={page.location}
+                initialJobs={initialJobs}
               />
             </div>
-
-            {/* Sidebar - Category Information (1/3 width) */}
             <div className="lg:col-span-1">
               <CategoryContent page={page} />
             </div>
           </div>
 
-          {/* Related Categories Section - SEO Interlinking */}
           {relatedCategories.length > 0 && (
             <section className="mt-12 pt-8 border-t border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Related Job Categories
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Job Categories</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {relatedCategories.map((related) => (
+                {relatedCategories.map(related => (
                   <Link
                     key={related.slug}
                     href={`/resources/${related.slug}`}

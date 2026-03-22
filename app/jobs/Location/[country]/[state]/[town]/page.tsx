@@ -9,7 +9,7 @@ import JobList from '@/components/jobs/JobList';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
-export const revalidate = 3600;
+export const revalidate = false;
 export const dynamicParams = true;
 
 function getSupabase() {
@@ -83,7 +83,7 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
       .select('slug, country_slug')
       .eq('is_active', true);
     return (data || []).map(r => `${r.country_slug}/${r.slug}`);
-  }, ['active-state-slugs'], { revalidate: 3600 });
+  }, ['active-state-slugs'], { revalidate: false });
   const activeStateSlugs = new Set(await getActiveStateSlugs());
 
   const breadcrumbItems = [
