@@ -79,7 +79,7 @@ function transformJobToUI(job: RawJobRow): JobUI {
     calculatedTotal: 0,
     type: job.type || job.employment_type || '',
     breakdown: null,
-    postedDate: job.posted_date || job.created_at || null,
+    postedDate: job.posted_date || job.created_at || undefined,
   };
 }
 
