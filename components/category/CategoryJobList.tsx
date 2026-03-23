@@ -202,7 +202,6 @@ export default function CategoryJobList({ initialJobs = [] }: CategoryJobListPro
                 appliedJobs={appliedJobs}
                 onSave={handleSave}
                 onApply={handleApply}
-                onShowBreakdown={undefined}
                 hideMatchScore
               />
             </React.Fragment>
