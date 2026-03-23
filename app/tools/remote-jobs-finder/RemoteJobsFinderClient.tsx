@@ -591,7 +591,7 @@ export default function RemoteJobsFinderClient() {
       )}
 
       <MatchBreakdownModal
-        isOpen={matchModalOpen}
+        open={matchModalOpen}
         onClose={() => setMatchModalOpen(false)}
         data={matchModalData}
       />
