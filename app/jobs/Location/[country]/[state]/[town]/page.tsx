@@ -1,10 +1,10 @@
-// app/jobs/Location/[country]/[state]/page.tsx
+// app/jobs/Location/[country]/[state]/[town]/page.tsx
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
-import { MapPin, Briefcase, Building2, TrendingUp, DollarSign, HelpCircle, ExternalLink, ChevronRight, BookOpen } from 'lucide-react';
+import { MapPin, Briefcase, Building2, TrendingUp, DollarSign, ChevronRight } from 'lucide-react';
 import JobList from '@/components/jobs/JobList';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
 import AdUnit from '@/components/ads/AdUnit';
@@ -23,15 +23,17 @@ function getSupabase() {
 interface PageParams {
   country: string;
   state: string;
+  town: string;
 }
 
-async function getStatePage(countrySlug: string, stateSlug: string) {
+async function getTownPage(countrySlug: string, stateSlug: string, townSlug: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase
-    .from('location_state_pages')
+    .from('location_town_pages')           // <-- Change if your table name is different
     .select('*')
     .eq('country_slug', countrySlug)
-    .eq('slug', stateSlug)
+    .eq('state_slug', stateSlug)
+    .eq('slug', townSlug)
     .eq('is_active', true)
     .single();
 
@@ -42,18 +44,19 @@ async function getStatePage(countrySlug: string, stateSlug: string) {
 export async function generateStaticParams() {
   const supabase = getSupabase();
   const { data } = await supabase
-    .from('location_state_pages')
-    .select('country_slug, slug')
+    .from('location_town_pages')
+    .select('country_slug, state_slug, slug')
     .eq('is_active', true);
 
   return (data || []).map((row) => ({
-    slug: row.country_slug,
-    state: row.slug,
+    country: row.country_slug,
+    state: row.state_slug,
+    town: row.slug,
   }));
 }
 
 export async function generateMetadata({ params }: { params: PageParams }): Promise<Metadata> {
-  const page = await getStatePage(params.country, params.state);
+  const page = await getTownPage(params.country, params.state, params.town);
   if (!page) return { title: 'Jobs | JobMeter' };
 
   return {
@@ -72,34 +75,22 @@ export async function generateMetadata({ params }: { params: PageParams }): Prom
   };
 }
 
-export default async function StateJobsPage({ params }: { params: PageParams }) {
-  const page = await getStatePage(params.country, params.state);
+export default async function TownJobsPage({ params }: { params: PageParams }) {
+  const page = await getTownPage(params.country, params.state, params.town);
   if (!page) notFound();
-
-  // Fetch active state slugs so we only link to pages that actually exist — cached 1hr
-  const getActiveStateSlugs = unstable_cache(async () => {
-    const supabase = getSupabase();
-    const { data } = await supabase
-      .from('location_state_pages')
-      .select('slug, country_slug')
-      .eq('is_active', true);
-    return (data || []).map(r => `${r.country_slug}/${r.slug}`);
-  }, ['active-state-slugs'], { revalidate: false });
-  const activeStateSlugs = new Set(await getActiveStateSlugs());
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
     { name: 'Jobs', url: `${siteUrl}/jobs` },
     { name: page.country, url: `${siteUrl}/jobs/Location/${page.country_slug}` },
-    { name: page.state, url: `${siteUrl}/jobs/Location/${page.full_path}` },
+    { name: page.state, url: `${siteUrl}/jobs/Location/${page.country_slug}/${page.state_slug}` },
+    { name: page.town, url: `${siteUrl}/jobs/Location/${page.full_path}` },
   ];
 
   const towns: Array<{ name: string; slug: string; is_active: boolean }> = page.towns || [];
   const relatedStates: Array<{ name: string; slug: string; country_slug: string }> = page.related_states || [];
   const topRoles: Array<{ role: string; avg_salary: string; demand: string }> = page.top_roles || [];
   const majorEmployers: Array<{ name: string; sector: string; area?: string }> = page.major_employers || [];
-  const faqs: Array<{ question: string; answer: string }> = page.faqs || [];
-  const blogLinks: Array<{ title: string; slug: string; published_at?: string }> = page.blog_links || [];
   const salaryRanges = page.salary_ranges || {};
   const costOfLiving = page.cost_of_living || {};
 
@@ -108,32 +99,31 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
       <BreadcrumbListSchema items={breadcrumbItems} />
 
       {/* Job list — first thing users see */}
-      <JobList initialCountry={page.country} initialState={page.state} />
+      <JobList initialCountry={page.country} initialState={page.state} initialTown={page.town} />
 
-      {/* ── STATE CONTENT ─────────────────────────────── */}
+      {/* ── TOWN CONTENT ─────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
 
         {/* Intro card */}
         <div className="bg-white rounded-xl shadow-sm p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">{page.h1_title || `Jobs in ${page.state}`}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">{page.h1_title || `Jobs in ${page.town}, ${page.state}`}</h1>
           {page.capital_city && (
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
               <MapPin size={14} />
               <span>Capital: {page.capital_city}</span>
-              {page.region && <><span>·</span><span>{page.region}</span></>}
             </div>
           )}
           <p className="text-gray-600 leading-relaxed">{page.intro}</p>
         </div>
 
-        {/* Towns / Areas */}
+        {/* Towns / Areas - if needed */}
         {towns.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <MapPin size={20} className="text-blue-600" />
               Areas & Towns in {page.state}
             </h2>
-            <p className="text-sm text-gray-500 mb-5">Browse jobs by specific area within {page.state}. More town pages coming soon.</p>
+            <p className="text-sm text-gray-500 mb-5">Browse jobs by specific area within {page.state}.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {towns.map((town) =>
                 town.is_active ? (
@@ -161,7 +151,6 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
 
         {/* Job Market + Salary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Job market overview */}
           {page.job_market_summary && (
             <div className="bg-white rounded-xl shadow-sm p-8">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -169,27 +158,21 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
                 Job Market Overview
               </h2>
               <p className="text-gray-600 leading-relaxed">{page.job_market_summary}</p>
-              {page.top_sectors && page.top_sectors.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {page.top_sectors.map((s: string) => (
-                    <span key={s} className="px-3 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">{s}</span>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
-          {/* Salary ranges */}
           {Object.keys(salaryRanges).length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-8">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <DollarSign size={20} className="text-yellow-600" />
-                Salary Ranges in {page.state}
+                Salary Ranges in {page.town}
               </h2>
               <div className="space-y-3">
                 {Object.entries(salaryRanges).filter(([k]) => k !== 'note').map(([level, data]: [string, any]) => (
                   <div key={level} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                    <span className="text-sm font-medium text-gray-700 capitalize">{level === 'entry' ? 'Entry Level' : level === 'mid' ? 'Mid Level' : level === 'senior' ? 'Senior' : 'Executive'}</span>
+                    <span className="text-sm font-medium text-gray-700 capitalize">
+                      {level === 'entry' ? 'Entry Level' : level === 'mid' ? 'Mid Level' : level === 'senior' ? 'Senior' : 'Executive'}
+                    </span>
                     <span className="text-sm font-semibold text-gray-900">{data.min} – {data.max}</span>
                   </div>
                 ))}
@@ -204,7 +187,7 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
               <Briefcase size={20} className="text-blue-600" />
-              Top Roles in {page.state}
+              Top Roles in {page.town}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {topRoles.map((role, i) => (
@@ -227,7 +210,7 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
           <div className="bg-white rounded-xl shadow-sm p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
               <Building2 size={20} className="text-purple-600" />
-              Major Employers in {page.state}
+              Major Employers in {page.town}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {majorEmployers.map((emp, i) => (
@@ -246,7 +229,7 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
         {/* Cost of Living */}
         {Object.keys(costOfLiving).length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-5">Cost of Living in {page.state}</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-5">Cost of Living in {page.town}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {Object.entries(costOfLiving).filter(([k]) => k !== 'note' && k !== 'overall').map(([key, value]) => (
                 <div key={key} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
@@ -254,9 +237,13 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
                   <p className="text-sm font-semibold text-gray-900">{value as string}</p>
                 </div>
               ))}
-        </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
+      {/* Mobile Bottom Ad */}
       <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
           <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
