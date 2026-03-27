@@ -1,6 +1,7 @@
 import JobList from '@/components/jobs/JobList';
 import { Metadata } from 'next';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -56,6 +57,12 @@ export default function UKJobsPage() {
       <h3 className="text-xl font-semibold text-gray-900 mb-3">Popular Job Searches in the UK</h3>
       <p className="text-gray-600 mb-4">Top searches on JobMeter for the UK include: <strong>software engineer jobs in London</strong>, <strong>NHS nursing jobs 2024</strong>, <strong>graduate jobs in Manchester</strong>, <strong>finance analyst jobs in Edinburgh</strong>, <strong>remote marketing jobs UK</strong>, <strong>data scientist jobs in Bristol</strong>, <strong>project manager jobs in Birmingham</strong>, and <strong>legal jobs in London</strong>. All listings are verified and updated daily.</p>
 
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </>

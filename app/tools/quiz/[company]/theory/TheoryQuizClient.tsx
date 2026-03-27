@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { quizSupabase } from '@/lib/quizSupabase';
 import { theme } from '@/lib/theme';
 import { ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import AdUnit from '@/components/ads/AdUnit';
 
 interface TheoryQuestion {
   id: string;
@@ -295,6 +296,11 @@ export default function TheoryQuizClient({ company }: { company: string }) {
         </div>
       </div>
 
+      {/* ── [AD: below exit bar] — above first question, mobile only ─── */}
+      <div className="lg:hidden px-4 py-2">
+        <AdUnit slot="4198231153" format="auto" />
+      </div>
+
       <div className="max-w-4xl mx-auto px-4 py-4">
         {/* Progress bar */}
         <div className="mb-4">
@@ -341,7 +347,7 @@ export default function TheoryQuizClient({ company }: { company: string }) {
               className="flex-1 py-3 rounded-lg font-semibold text-sm disabled:opacity-40"
               style={{ backgroundColor: theme.colors.primary.DEFAULT, color: '#fff' }}
             >
-              {submitting ? 'Grading with AI...' : `Submit (${answeredCount}/${questions.length})`}
+              {submitting ? 'Grading...' : `Submit (${answeredCount}/${questions.length})`}
             </button>
           ) : (
             <button

@@ -1,5 +1,6 @@
 import React from 'react';
 import CareerClient from './CareerClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -66,6 +67,12 @@ export default function CareerPage() {
   return (
     <>
       <CareerClient />
+
+      {/* Ad 1: Display Top */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <AdUnit slot="4198231153" format="auto" />
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="border-t border-gray-200 pt-8">
           <div className="mb-10">
@@ -84,6 +91,7 @@ export default function CareerPage() {
             <p className="text-gray-700 leading-relaxed mb-4">Yes—ChatGPT can respond to an AI career coach prompt with useful general guidance. Ask it to review your resume for a tech role and you will get a reasonable answer. However, ChatGPT has no memory of your profile between sessions, no access to real-time job market data, and no structured development tracking.</p>
             <p className="text-gray-700 leading-relaxed">Career Coach AI goes further: it stores your profile securely, cross-references your data against live market trends, and delivers a structured roadmap rather than a one-off text response. Users consistently report better outcomes compared to open-ended Career Coach GPT prompts.</p>
           </div>
+
           <div className="mb-10">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">The 7 Qualities of an Effective Career Coach</h3>
             <p className="text-gray-700 leading-relaxed mb-4">Whether working with career coaches near you or using an AI career coach app, the best coaching experiences share seven core qualities:</p>
@@ -143,6 +151,7 @@ export default function CareerPage() {
               ))}
             </div>
           </div>
+
           <div className="mb-10">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h3>
             <div className="space-y-6">
@@ -179,8 +188,20 @@ export default function CareerPage() {
           </div>
         </div>
       </div>
+
+      {/* Ad 4: Display Bottom */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        <AdUnit slot="9751041788" format="auto" />
+      </div>
+
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: softwareSchema }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqSchema }} />
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
+      </div>
     </>
   );
 }

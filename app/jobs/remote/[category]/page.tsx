@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { ArrowLeft, Briefcase, Globe, DollarSign, MapPin, Wrench, ChevronRight, Laptop } from 'lucide-react';
 import CategoryJobList, { RawJobRow } from '@/components/category/CategoryJobList';
 import RemoteCategoryContent from '@/components/category/RemoteCategoryContent';
+import AdUnit from '@/components/ads/AdUnit';
 
 // Cache forever — clears on deploy or on-demand revalidation
 export const revalidate = false;
@@ -335,6 +336,12 @@ export default async function RemoteCategoryPage({ params }: { params: { categor
               </div>
             </section>
           )}
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </>

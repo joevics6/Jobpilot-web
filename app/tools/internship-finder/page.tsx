@@ -1,5 +1,6 @@
 import { theme } from '@/lib/theme';
 import InternshipFinderClient from './InternshipFinderClient';
+import AdUnit from '@/components/ads/AdUnit';
 import { GraduationCap, Laptop, Award, Home, Globe, Rocket, ClipboardList, GraduationCap as GC, ChevronRight } from 'lucide-react';
 
 export const revalidate = false;
@@ -53,6 +54,8 @@ export default function InternshipFinderPage() {
 
       <div className="px-4 md:px-6 py-6 max-w-7xl mx-auto">
         <InternshipFinderClient />
+
+        <AdUnit slot="4198231153" format="auto" />
 
         <div className="mt-12 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-1">Explore More Job Finder Tools</h2>
@@ -148,6 +151,7 @@ export default function InternshipFinderPage() {
                 </tbody>
               </table>
             </div>
+
             <p className="text-gray-600 leading-relaxed mb-6">
               Niche searches like &quot;web development virtual internship,&quot; &quot;online internship for web development,&quot; &quot;how to find psychology internships,&quot; and &quot;where to find fashion internships&quot; are all supported with dedicated filters and curated listings.
             </p>
@@ -270,6 +274,8 @@ export default function InternshipFinderPage() {
           </article>
         </div>
 
+        <AdUnit slot="9751041788" format="auto" />
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -343,6 +349,12 @@ export default function InternshipFinderPage() {
             ])
           }}
         />
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </div>
   );

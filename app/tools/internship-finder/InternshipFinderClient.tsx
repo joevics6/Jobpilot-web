@@ -11,6 +11,7 @@ import { MatchBreakdownModalData } from '@/components/jobs/MatchBreakdownModal';
 import { Search, Filter, X, Briefcase } from 'lucide-react';
 import { scoreJob, JobRow, UserOnboardingData } from '@/lib/matching/matchEngine';
 import { matchCacheService } from '@/lib/matching/matchCache';
+import AdUnit from '@/components/ads/AdUnit';
 
 const STORAGE_KEYS = {
   SAVED_JOBS: 'saved_jobs',
@@ -574,9 +575,13 @@ export default function InternshipFinderClient() {
             {user && <option value="match">Best Match</option>}
           </select>
         </div>
-      </div>
+        </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="mb-4">
+          <AdUnit slot="4198231153" format="auto" />
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div className="divide-y" style={{ borderColor: theme.colors.border.DEFAULT }}>
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -616,6 +621,12 @@ export default function InternshipFinderClient() {
           )}
         </div>
       </div>
+
+      {totalPages > 1 && (
+        <div className="my-6">
+          <AdUnit slot="9010641928" format="auto" />
+        </div>
+      )}
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">

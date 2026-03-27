@@ -11,6 +11,7 @@ import { MatchBreakdownModalData } from '@/components/jobs/MatchBreakdownModal';
 import { ChevronDown, Briefcase, GraduationCap, Search, Filter, X, Laptop, Globe, Home, Award, Rocket, ClipboardList, Wifi } from 'lucide-react';
 import { scoreJob, JobRow, UserOnboardingData } from '@/lib/matching/matchEngine';
 import { matchCacheService } from '@/lib/matching/matchCache';
+import AdUnit from '@/components/ads/AdUnit';
 
 const STORAGE_KEYS = {
   SAVED_JOBS: 'saved_jobs',
@@ -518,6 +519,10 @@ export function GraduateTraineeFinderClient() {
         )}
       </div>
 
+      <div className="mb-4">
+        <AdUnit slot="4198231153" format="auto" />
+      </div>
+
       {/* Results Summary */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-600">
@@ -579,6 +584,12 @@ export function GraduateTraineeFinderClient() {
       </div>
 
       {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="my-6">
+          <AdUnit slot="9010641928" format="auto" />
+        </div>
+      )}
+
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button

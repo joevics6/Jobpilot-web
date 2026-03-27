@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Newspaper, Calendar, Eye, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import { BlogSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const metadata: Metadata = {
   title: 'Career Blog & Articles | Job Search Tips & Salary Guides | JobMeter',
@@ -62,7 +63,7 @@ export const revalidate = false;
 
 export default async function BlogPage() {
   const posts = await getBlogPosts();
-  
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -72,9 +73,12 @@ export default async function BlogPage() {
     });
   };
 
+  // Split posts: first 6 for top grid, rest for bottom grid
+  const topPosts = posts.slice(0, 6);
+  const bottomPosts = posts.slice(6);
+
   return (
     <>
-      {/* Structured Data */}
       <BlogSchema />
 
       <div className="min-h-screen bg-gray-50">
@@ -96,8 +100,13 @@ export default async function BlogPage() {
           </div>
         </div>
 
+        {/* Ad: Below header / above content — high-visibility placement */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <AdUnit slot="4198231153" format="auto" />
+        </div>
+
         {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
           {posts.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
               <Newspaper size={48} className="mx-auto text-gray-400 mb-4" />
@@ -105,12 +114,77 @@ export default async function BlogPage() {
               <p className="text-gray-600">Check back soon for career insights and tips.</p>
             </div>
           ) : (
-            <div className="space-y-8">
-              {/* All Posts Grid */}
+            <div className="space-y-10">
+              {/* Latest Articles — First 6 */}
               <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Latest Articles</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {posts.map((post) => (
+                  {topPosts.map((post) => (
+                    <article
+                      key={post.id}
+                      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-gray-200 flex flex-col"
+                    >
+                      {post.featured_image_url && (
+                        <Link href={`/blog/${post.slug}`}>
+                          <div className="relative w-full h-48 bg-gray-200">
+                            <Image
+                              src={post.featured_image_url}
+                              alt={post.title}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        </Link>
+                      )}
+
+                      <div className="p-6 flex-1 flex flex-col">
+                        <Link href={`/blog/${post.slug}`}>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2 hover:text-blue-600 transition-colors line-clamp-2">
+                            {post.title}
+                          </h3>
+                        </Link>
+
+                        {post.excerpt && (
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-1">
+                            {post.excerpt}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Calendar size={14} />
+                              <span>{formatDate(post.published_at)}</span>
+                            </div>
+                            {post.view_count > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Eye size={14} />
+                                <span>{post.view_count}</span>
+                              </div>
+                            )}
+                          </div>
+                          <Link
+                            href={`/blog/${post.slug}`}
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-sm"
+                          >
+                            Read
+                            <ArrowRight size={16} />
+                          </Link>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              {/* Ad: Mid-page between post groups — in-article style performs well here */}
+              <AdUnit slot="4690286797" format="fluid" layout="in-article" />
+
+              {/* Remaining Articles */}
+              {bottomPosts.length > 0 && (
+                <section>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {bottomPosts.map((post) => (
                       <article
                         key={post.id}
                         className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-gray-200 flex flex-col"
@@ -167,8 +241,26 @@ export default async function BlogPage() {
                     ))}
                   </div>
                 </section>
+              )}
+
+              {/* Ad: End of content — catches users who scrolled through everything */}
+              <AdUnit slot="9751041788" format="auto" />
             </div>
           )}
+        </div>
+
+        {/* Sticky Mobile Bottom Ad */}
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100"
+          style={{ height: '50px', overflow: 'hidden' }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+            <AdUnit
+              slot="3349195672"
+              format="auto"
+              style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }}
+            />
+          </div>
         </div>
       </div>
     </>

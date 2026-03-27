@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { MapPin, Briefcase, Building2, TrendingUp, DollarSign, HelpCircle, ExternalLink, ChevronRight, BookOpen } from 'lucide-react';
 import JobList from '@/components/jobs/JobList';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 export const revalidate = false;
@@ -335,6 +336,14 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
             dangerouslySetInnerHTML={{ __html: page.seo_content }}
           />
         )}
+      </div>
+
+      <AdUnit slot="9751041788" format="auto" />
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </>
   );

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { Building2, ArrowRight, CheckCircle, ArrowLeft } from 'lucide-react';
+import AdUnit from '@/components/ads/AdUnit';
 
 interface Props {
   searchParams?: { [key: string]: string | string[] | undefined };
@@ -168,6 +169,8 @@ export default async function CompanyDirectoryPage({ searchParams }: Props) {
           </div>
         </div>
 
+        <AdUnit slot="4198231153" format="auto" />
+
         {/* Call to Action */}
         <div className="bg-blue-50 border-b border-blue-100">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
@@ -244,6 +247,14 @@ export default async function CompanyDirectoryPage({ searchParams }: Props) {
               </div>
             ))
           )}
+        </div>
+
+        <AdUnit slot="9751041788" format="auto" />
+
+        <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+            <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+          </div>
         </div>
       </div>
     </>

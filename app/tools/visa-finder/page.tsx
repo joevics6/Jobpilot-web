@@ -2,6 +2,7 @@ import React from 'react';
 import { Globe } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import VisaFinderClient from './VisaFinderClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -41,6 +42,12 @@ export default function VisaFinderPage() {
           </div>
         </div>
       </div>
+
+      {/* Ad 1: Display Top - After How It Works */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <AdUnit slot="4198231153" format="auto" />
+      </div>
+
       <VisaFinderClient />
       <div className="mt-8 bg-white rounded-2xl p-6 md:p-10 mx-4 md:mx-6 mb-8" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
         <article className="prose prose-gray max-w-none">
@@ -130,6 +137,7 @@ export default function VisaFinderPage() {
           <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Technology and Engineering Jobs with Visa Sponsorship</h3>
           <p className="text-gray-600 leading-relaxed mb-4">Beyond healthcare, technology and engineering represent the second largest category of jobs with visa sponsorship. H-1B visas for software engineers, data scientists, cloud architects, and cybersecurity specialists are actively sponsored by US tech firms, while UK Skilled Worker Visas and Canadian Express Entry pathways are favored by European and Canadian employers respectively.</p>
           <p className="text-gray-600 leading-relaxed mb-6">Tech professionals with experience in software development, data engineering, DevOps, machine learning, and fintech are particularly in demand globally. The Jobs with Visa Sponsorship Finder surfaces current technology openings with confirmed visa support — covering roles in the US, UK, Canada, Germany, the Netherlands, and Australia. Salaries for sponsored tech roles typically range from $80,000–$200,000 USD annually depending on seniority and specialization.</p>
+
           <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Airline, Travel, and Hospitality Jobs with Visa Sponsorship</h3>
           <p className="text-gray-600 leading-relaxed mb-4">For candidates drawn to careers that involve international travel, airline and hospitality employers also sponsor visas for multilingual, customer-facing professionals. Key employers and opportunities in this space include:</p>
           <ul className="list-disc pl-6 space-y-2 text-gray-600 mb-6">
@@ -176,6 +184,7 @@ export default function VisaFinderPage() {
               <cite className="text-sm text-gray-500 mt-1 block">— Sophie, Flight Attendant, Atlanta USA</cite>
             </blockquote>
           </div>
+
           <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">Frequently Asked Questions About Jobs with Visa Sponsorship</h3>
           <div className="space-y-5 mb-8">
             {[
@@ -198,6 +207,12 @@ export default function VisaFinderPage() {
           </div>
         </article>
       </div>
+
+      {/* Ad 4: Display Bottom */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        <AdUnit slot="9751041788" format="auto" />
+      </div>
+
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([
         { "@context": "https://schema.org", "@type": "WebPage", "name": "Jobs with Visa Sponsorship — Find Sponsored Work Abroad, Travel Nurse Jobs & Global Career Opportunities 2026", "description": "Discover jobs with visa sponsorship including travel nurse jobs, travel RN jobs, technology roles with H-1B sponsorship, UK Skilled Worker Visa jobs, Canadian work visa opportunities, and jobs that pay to relocate. The best visa sponsorship jobs platform for internationally mobile professionals worldwide.", "url": "https://jobmeter.app/tools/visa-finder", "inLanguage": "en", "dateModified": new Date().toISOString().split('T')[0], "breadcrumb": { "@type": "BreadcrumbList", "itemListElement": [
           { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://jobmeter.app" },
@@ -222,6 +237,12 @@ export default function VisaFinderPage() {
           { "@type": "ListItem", "position": 5, "name": "Entry Level Jobs Finder", "url": "https://jobmeter.app/tools/entry-level-finder" },
         ] }
       ]) }} />
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
+      </div>
     </div>
   );
 }

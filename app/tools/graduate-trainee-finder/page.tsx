@@ -2,6 +2,7 @@ import React from 'react';
 import { theme } from '@/lib/theme';
 import { GraduationCap, Briefcase, Wifi, Award, Home, Globe, Rocket, ClipboardList } from 'lucide-react';
 import { GraduateTraineeFinderClient } from './GraduateTraineeFinderClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -56,6 +57,8 @@ export default function GraduateTraineeFinderPage() {
 
       <div className="px-4 md:px-6 py-6 max-w-7xl mx-auto">
         <GraduateTraineeFinderClient />
+
+        <AdUnit slot="4198231153" format="auto" />
 
         {/* ── Related Tools ── */}
         <div className="mt-12 mb-8">
@@ -234,7 +237,7 @@ export default function GraduateTraineeFinderPage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-gray-600 leading-relaxed mb-6">
+              <p className="text-gray-600 leading-relaxed mb-6">
               Beyond base salary, the most valuable aspect of graduate trainee programs is the long-term return: 70% of trainees in top Nigerian programs secure permanent roles with accelerated progression tracks. Many advance to analyst, assistant manager, or junior manager level within 2–3 years of completing their traineeship — a trajectory that would typically take 5–7 years through standard entry-level hiring.
             </p>
 
@@ -285,6 +288,8 @@ export default function GraduateTraineeFinderPage() {
 
           </article>
         </div>
+
+        <AdUnit slot="9751041788" format="auto" />
 
         {/* ── Schema Markup ── */}
         <script
@@ -361,6 +366,12 @@ export default function GraduateTraineeFinderPage() {
             ])
           }}
         />
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </div>
   );

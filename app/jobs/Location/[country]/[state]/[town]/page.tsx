@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { MapPin, Briefcase, Building2, TrendingUp, DollarSign, HelpCircle, ExternalLink, ChevronRight, BookOpen } from 'lucide-react';
 import JobList from '@/components/jobs/JobList';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 export const revalidate = false;
@@ -253,88 +254,13 @@ export default async function StateJobsPage({ params }: { params: PageParams }) 
                   <p className="text-sm font-semibold text-gray-900">{value as string}</p>
                 </div>
               ))}
-            </div>
-            {costOfLiving.note && <p className="text-sm text-gray-500 mt-4 italic">{costOfLiving.note}</p>}
-          </div>
-        )}
+        </div>
+      </div>
 
-        {/* FAQs */}
-        {faqs.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
-              <HelpCircle size={20} className="text-orange-500" />
-              Frequently Asked Questions
-            </h2>
-            <div className="space-y-5">
-              {faqs.map((faq, i) => (
-                <div key={i} className="border-b border-gray-100 pb-5 last:border-0 last:pb-0">
-                  <p className="font-semibold text-gray-900 mb-2">{faq.question}</p>
-                  <p className="text-gray-600 text-sm leading-relaxed">{faq.answer}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Related States */}
-        {relatedStates.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Related States</h2>
-            <div className="flex flex-wrap gap-3">
-              {relatedStates.map((s) => {
-                const key = `${s.country_slug}/${s.slug}`;
-                const isActive = activeStateSlugs.has(key);
-                return isActive ? (
-                  <Link
-                    key={s.slug}
-                    href={`/jobs/Location/${key}`}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm font-medium text-gray-700 hover:text-blue-700"
-                  >
-                    <MapPin size={14} />
-                    {s.name}
-                  </Link>
-                ) : (
-                  <span
-                    key={s.slug}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-400 cursor-default"
-                  >
-                    <MapPin size={14} />
-                    {s.name}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Blog Links */}
-        {blogLinks.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
-              <BookOpen size={20} className="text-blue-600" />
-              Related Articles
-            </h2>
-            <div className="space-y-3">
-              {blogLinks.map((post, i) => (
-                <Link
-                  key={i}
-                  href={`/blog/${post.slug}`}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group"
-                >
-                  <span className="text-sm font-medium text-gray-800 group-hover:text-blue-700">{post.title}</span>
-                  <ExternalLink size={14} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 ml-3" />
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* SEO Content */}
-        {page.seo_content && (
-          <div className="bg-white rounded-xl shadow-sm p-8 prose prose-gray max-w-none"
-            dangerouslySetInnerHTML={{ __html: page.seo_content }}
-          />
-        )}
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </>
   );

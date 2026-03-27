@@ -7,8 +7,8 @@ import { notFound } from 'next/navigation';
 import CompanyQuizClient from './CompanyQuizClient';
 import { COMPANIES, companyToSlug, slugToCompany } from '@/lib/quizCompanies';
 import { quizSupabase } from '@/lib/quizSupabase';
+import AdUnit from '@/components/ads/AdUnit';
 
-// Cache SEO content for 7 days — rebuild weekly or on redeploy
 export const revalidate = false;
 
 interface Props {
@@ -21,8 +21,6 @@ interface CompanyData {
   description?: string;
 }
 
-// ── Fetch company SEO data from quiz_companies table ─────────────────────────
-// Called at build time only — result is baked into static HTML
 async function getCompanyData(companyName: string): Promise<CompanyData | null> {
   try {
     const { data } = await quizSupabase
@@ -36,14 +34,12 @@ async function getCompanyData(companyName: string): Promise<CompanyData | null> 
   }
 }
 
-// ── Pre-render every company page at build time ───────────────────────────────
 export async function generateStaticParams() {
   return COMPANIES.map((company) => ({
     company: companyToSlug(company),
   }));
 }
 
-// ── SEO metadata — uses quiz_companies description if available ───────────────
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { company: slug } = await params;
   const company = slugToCompany(slug);
@@ -53,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const firstName = company.split(' ')[0];
 
   const description = companyData?.description
-    ? companyData.description.replace(/<[^>]+>/g, '').slice(0, 160) // strip HTML, limit length
+    ? companyData.description.replace(/<[^>]+>/g, '').slice(0, 160)
     : `Practice ${company} aptitude test questions online. Free objective questions with instant results. Premium: 50 questions + AI-graded theory. Prepare for ${firstName} recruitment.`;
 
   return {
@@ -70,15 +66,60 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
 export default async function CompanyQuizPage({ params }: Props) {
   const { company: slug } = await params;
   const company = slugToCompany(slug);
 
   if (!company) notFound();
 
-  // Fetch SEO content at build time — passed as static prop to client component
   const companyData = await getCompanyData(company!);
 
-  return <CompanyQuizClient company={company!} companyData={companyData} />;
+  return (
+    <>
+      {/* ── Main content + Desktop sidebar layout ──────────────────────── */}
+      <div className="flex gap-6 items-start max-w-screen-xl mx-auto">
+
+        {/* ── Left / main content ────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0">
+          {/*
+            Ad placement map for this page:
+            1. [mobile only] Ad just above company name badge       — inside CompanyQuizClient, slot 4198231153
+            2. [mobile only] Ad after disclaimer container          — inside CompanyQuizClient, slot 9751041788
+            3. [desktop only] Sidebar ads                           — aside below, slots 4198231153 + 9751041788
+            4. [mobile only]  Anchor ad fixed at bottom             — fixed div below, slot 3349195672
+          -->
+          */}
+          <CompanyQuizClient company={company!} companyData={companyData} />
+        </div>
+
+        {/* ── Right: Desktop sidebar ads ──────────────────────────────── */}
+        <aside className="hidden lg:flex flex-col gap-6 w-[300px] shrink-0 sticky top-20 pt-6">
+          <AdUnit
+            slot="4198231153"
+            format="auto"
+            style={{ display: 'block', width: '300px', minHeight: '250px' }}
+          />
+          <AdUnit
+            slot="9751041788"
+            format="auto"
+            style={{ display: 'block', width: '300px', minHeight: '250px' }}
+          />
+        </aside>
+      </div>
+
+      {/* ── Mobile anchor ad (fixed bottom, hidden on desktop) ─────────── */}
+      {/* Adds bottom padding so content isn't hidden behind the anchor bar */}
+      <div className="h-[50px] lg:hidden" aria-hidden="true" />
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100"
+        style={{ height: '50px', overflow: 'hidden' }}
+      >
+        <AdUnit
+          slot="3349195672"
+          format="auto"
+          style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }}
+        />
+      </div>
+    </>
+  );
 }

@@ -104,15 +104,15 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const jobTitle = job.title || 'Job Opportunity';
   const countryAbbr = getCountryAbbreviation(job);
 
-  // ── Title: "Accountant at Dangote in NG | JobMeter"
-  // or for confidential: "Accountant in Lagos, NG | JobMeter"
+// ── Title: "Accountant at Dangote in NG" (layout template appends "| JobMeter")
+  // or for confidential: "Accountant in Lagos, NG"
   let titleCore = isConfidential
     ? countryAbbr ? `${jobTitle} in ${countryAbbr}` : jobTitle
     : countryAbbr ? `${jobTitle} at ${companyName} in ${countryAbbr}` : `${jobTitle} at ${companyName}`;
 
-  // Keep title under 60 chars before " | JobMeter"
-  if (titleCore.length > 49) titleCore = titleCore.substring(0, 49).trim();
-  const title = `${titleCore} | JobMeter`;
+  // Keep title under 60 chars (layout adds " | JobMeter" after)
+  if (titleCore.length > 60) titleCore = titleCore.substring(0, 60).trim();
+  const title = titleCore;
 
   // ── Description: keyword-rich with location and salary
   let description = isConfidential

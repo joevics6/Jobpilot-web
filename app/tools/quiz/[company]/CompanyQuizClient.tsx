@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { quizSupabase } from '@/lib/quizSupabase';
 import { getCached, setCached, CACHE_KEYS } from '@/lib/quizCache';
 import { theme } from '@/lib/theme';
+import AdUnit from '@/components/ads/AdUnit';
 import {
   ClipboardList,
   FileText,
@@ -258,7 +259,7 @@ export default function CompanyQuizClient({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
-      {/* Header */}
+      {/* ── Top nav bar ──────────────────────────────────────────────────── */}
       <div className="px-4 py-3" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link
@@ -273,7 +274,14 @@ export default function CompanyQuizClient({
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Company badge */}
+
+        {/* ── [AD 1] Before company name — mobile only ─────────────────── */}
+        {/* Desktop: sidebar handles this slot instead */}
+        <div className="lg:hidden mb-5">
+          <AdUnit slot="4198231153" format="auto" />
+        </div>
+
+        {/* ── Company badge / heading ───────────────────────────────────── */}
         <div className="text-center mb-6">
           <div
             className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-3"
@@ -290,8 +298,11 @@ export default function CompanyQuizClient({
           <p className="text-sm text-gray-500 mt-0.5">Aptitude Test Practice</p>
         </div>
 
-        {/* Timer toggle */}
-        <div className="flex items-center gap-3 mb-5 p-3 bg-white rounded-lg" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
+        {/* ── Timer toggle ─────────────────────────────────────────────── */}
+        <div
+          className="flex items-center gap-3 mb-5 p-3 bg-white rounded-lg"
+          style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}
+        >
           <input
             type="checkbox"
             id="useTimer"
@@ -305,7 +316,7 @@ export default function CompanyQuizClient({
           </label>
         </div>
 
-        {/* Objective section */}
+        {/* ── Objective questions card ──────────────────────────────────── */}
         <div
           className="bg-white rounded-xl p-4 mb-3"
           style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}
@@ -350,7 +361,7 @@ export default function CompanyQuizClient({
           </div>
         </div>
 
-        {/* Theory section */}
+        {/* ── Theory questions card ─────────────────────────────────────── */}
         <button
           onClick={handleTheoryClick}
           className="w-full bg-white rounded-xl p-4 mb-3 text-left flex items-center gap-3 hover:shadow-sm transition-shadow"
@@ -371,7 +382,7 @@ export default function CompanyQuizClient({
           </div>
         </button>
 
-        {/* Premium teaser */}
+        {/* ── Premium teaser ───────────────────────────────────────────── */}
         <div
           className="rounded-xl p-4 mb-5"
           style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}
@@ -396,7 +407,7 @@ export default function CompanyQuizClient({
           </div>
         </div>
 
-        {/* Disclaimer */}
+        {/* ── Disclaimer ───────────────────────────────────────────────── */}
         <div
           className="rounded-xl p-4 mt-2"
           style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}
@@ -414,7 +425,13 @@ export default function CompanyQuizClient({
           </div>
         </div>
 
-        {/* SEO / About section */}
+        {/* ── [AD 2] After disclaimer — mobile only ────────────────────── */}
+        {/* Desktop: second sidebar ad handles this slot instead */}
+        <div className="lg:hidden mt-5">
+          <AdUnit slot="9751041788" format="auto" />
+        </div>
+
+        {/* ── SEO / About section ───────────────────────────────────────── */}
         {companyData?.description && (
           <div className="mt-6 pt-5 border-t border-gray-200">
             <div

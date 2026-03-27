@@ -2,6 +2,7 @@ import React from 'react';
 import { theme } from '@/lib/theme';
 import { XCircle, CheckCircle } from 'lucide-react';
 import ScamDetectorClient from './ScamDetectorClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -38,6 +39,12 @@ export default function ScamDetectorPage() {
           </div>
         </div>
       </div>
+
+      {/* Ad 1: Display Top - After How It Works */}
+      <div className="px-6 py-6 max-w-4xl mx-auto">
+        <AdUnit slot="4198231153" format="auto" />
+      </div>
+
       <ScamDetectorClient />
       <div className="px-6 py-6 max-w-4xl mx-auto">
         <div className="space-y-8">
@@ -99,6 +106,7 @@ export default function ScamDetectorPage() {
               <li><strong>Unsolicited Remote Offers:</strong> No-interview hires via WhatsApp with no verifiable company.</li>
             </ol>
           </div>
+
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h2 className="text-xl font-bold text-gray-900 mb-4">How to Spot Fake Job Postings on Indeed</h2>
             <p className="text-gray-700 mb-3">Indeed hosts many legitimate jobs but also scams. Check these signs:</p>
@@ -114,6 +122,7 @@ export default function ScamDetectorPage() {
             <h3 className="text-lg font-bold text-gray-900 mt-6 mb-3">Stay Safe from Job Scams</h3>
             <p className="text-gray-700 mb-3">Never pay for jobs — real opportunities are always free to apply for. Use official sites, ignore urgency tactics, and report scams to the FTC (US), eCrime.ae (UAE), or directly to the platform like Indeed or LinkedIn.</p>
           </div>
+
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
             <div className="space-y-5">
@@ -139,12 +148,22 @@ export default function ScamDetectorPage() {
             </div>
           </div>
         </div>
+
+        {/* Ad 4: Display Bottom */}
+        <AdUnit slot="9751041788" format="auto" />
+
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "WebApplication", "name": "Job Scam Detector",
           "description": "AI-powered tool to detect job scams in any text. Analyze job postings, emails, and messages for fraud indicators.",
           "url": "https://jobmeter.com/tools/scam-detector", "applicationCategory": "Career",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "NGN" }
         }) }} />
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </div>
   );

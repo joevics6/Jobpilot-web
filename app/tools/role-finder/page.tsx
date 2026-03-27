@@ -1,6 +1,7 @@
 import React from 'react';
 import { theme } from '@/lib/theme';
 import RoleFinderClient from './RoleFinderClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -35,10 +36,15 @@ export default function RoleFinderPage() {
               </div>
             ))}
           </div>
+          </div>
         </div>
-      </div>
 
-      <RoleFinderClient />
+        {/* Ad 1: Display Top - After How It Works */}
+        <div className="px-6 py-6 max-w-4xl mx-auto">
+          <AdUnit slot="4198231153" format="auto" />
+        </div>
+
+        <RoleFinderClient />
 
       <div className="px-6 py-6 max-w-4xl mx-auto">
         <div className="space-y-6">
@@ -120,6 +126,7 @@ export default function RoleFinderPage() {
               <p className="mt-2">Input your own <strong>list of skills for job application</strong> to get a personalised version of this table — with match percentages and the exact gaps to close.</p>
             </div>
           </div>
+
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h2 className="text-xl font-bold text-gray-900 mb-4">High-Demand Skills Across Global Job Markets</h2>
             <div className="text-gray-700 space-y-3 text-sm leading-relaxed">
@@ -140,6 +147,7 @@ export default function RoleFinderPage() {
               <p className="mt-2">Regardless of your background, combining one technical skill with one soft skill (e.g., SQL + Communication) significantly expands the number of roles you qualify for — a pattern our <strong>career finder</strong> is specifically designed to surface.</p>
             </div>
           </div>
+
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h2 className="text-xl font-bold text-gray-900 mb-5">Frequently Asked Questions</h2>
             <div className="space-y-5 text-sm text-gray-700 leading-relaxed">
@@ -162,6 +170,9 @@ export default function RoleFinderPage() {
           </div>
         </div>
 
+        {/* Ad 4: Display Bottom */}
+        <AdUnit slot="9751041788" format="auto" />
+
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([
           { "@context": "https://schema.org", "@type": "WebApplication", "name": "Alternative Role Finder", "description": "Free AI-powered career path finder. Discover jobs based on your skills, explore alternative career paths, get skill gap analysis and certification tips.", "url": "https://jobmeter.com/tools/role-finder", "applicationCategory": "CareerApplication", "operatingSystem": "Web", "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }, "featureList": ["Jobs based on my skills matching", "Alternative career paths discovery", "Skill gap analysis", "Certification recommendations", "AI career finder", "Career change ideas"] },
           { "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
@@ -177,6 +188,12 @@ export default function RoleFinderPage() {
             { "@type": "HowToStep", "name": "Find Alternative Roles", "text": "Click the button to get 8-12 personalized role matches with skill gaps and certifications." }
           ] }
         ]) }} />
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </div>
   );

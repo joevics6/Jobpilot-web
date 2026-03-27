@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import InterviewClient from './InterviewClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -50,6 +51,11 @@ export default function InterviewPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Ad 1: Display Top - After How It Works */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <AdUnit slot="4198231153" format="auto" />
       </div>
 
       {/* Main Content - Client Island */}
@@ -264,6 +270,9 @@ export default function InterviewPage() {
 
         </div>
 
+        {/* Ad 4: Display Bottom - Before JSON-LD */}
+        <AdUnit slot="9751041788" format="auto" />
+
         {/* JSON-LD Schema */}
         <script
           type="application/ld+json"
@@ -279,6 +288,12 @@ export default function InterviewPage() {
             })
           }}
         />
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </div>
   );

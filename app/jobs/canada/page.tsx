@@ -1,6 +1,7 @@
 import JobList from '@/components/jobs/JobList';
 import { Metadata } from 'next';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -53,6 +54,12 @@ export default function CanadaJobsPage() {
       <h3 className="text-xl font-semibold text-gray-900 mb-3">Popular Job Searches in Canada</h3>
       <p className="text-gray-600 mb-4">Top searches on JobMeter for Canada include: <strong>software engineer jobs in Toronto</strong>, <strong>nursing jobs in Canada for internationally trained nurses</strong>, <strong>oil and gas jobs in Calgary</strong>, <strong>government jobs in Ottawa</strong>, <strong>data scientist jobs in Vancouver</strong>, <strong>AI research jobs in Montreal</strong>, <strong>remote jobs in Canada</strong>, and <strong>jobs in Canada with work permit support</strong>. All listings are verified and updated daily.</p>
 
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </>

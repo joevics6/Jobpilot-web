@@ -7,6 +7,7 @@ import { ArrowLeft, MapPin, Users, Briefcase, Globe, Linkedin, Twitter, Facebook
 import { CompanySchema, FAQSchema } from '@/components/seo/StructuredData';
 import { getCompanyName } from '@/lib/utils/companyUtils';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -300,6 +301,8 @@ export default async function CompanyProfilePage({ params }: { params: { slug: s
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {/* Main Content - Company Info */}
+            <AdUnit slot="4198231153" format="auto" />
+
             <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {/* Company Header - Mobile Optimized */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
@@ -675,6 +678,14 @@ export default async function CompanyProfilePage({ params }: { params: { slug: s
               </div>
             </section>
           )}
+        </div>
+
+        <AdUnit slot="9751041788" format="auto" />
+
+        <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+            <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+          </div>
         </div>
       </div>
     </>

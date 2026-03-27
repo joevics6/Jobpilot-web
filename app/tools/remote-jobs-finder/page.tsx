@@ -1,6 +1,7 @@
 import { Wifi, GraduationCap, Award, Globe, Home, Rocket, ClipboardList } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import RemoteJobsFinderClient from './RemoteJobsFinderClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -56,6 +57,8 @@ export default function RemoteJobsPage() {
       <div className="px-4 md:px-6 py-6 max-w-7xl mx-auto">
         {/* Interactive Client Component */}
         <RemoteJobsFinderClient />
+
+        <AdUnit slot="4198231153" format="auto" />
 
         {/* Related Tools */}
         <div className="mt-12 mb-8">
@@ -238,6 +241,8 @@ export default function RemoteJobsPage() {
 
           </article>
         </div>
+
+        <AdUnit slot="9751041788" format="auto" />
 
         {/* Schema Markup */}
         <script

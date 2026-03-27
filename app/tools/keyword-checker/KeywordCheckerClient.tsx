@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { FileCheck, CheckCircle, XCircle, Sparkles, Loader2, Upload, ArrowRight, ArrowLeft } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import AdUnit from '@/components/ads/AdUnit';
 
 interface KeywordResult {
   matchScore: number;
@@ -107,6 +108,10 @@ export default function KeywordCheckerClient() {
             </div>
             <p className="text-gray-600">{result.summary}</p>
           </div>
+
+          {/* ── [AD: between score and keyword grids] ────────────────── */}
+          <AdUnit slot="4690286797" format="fluid" layout="in-article" />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl p-5 shadow-sm" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
               <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><CheckCircle size={18} className="text-green-500" /> Matched Keywords</h3>

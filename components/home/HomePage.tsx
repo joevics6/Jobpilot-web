@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 import { theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 
-// OPTIMIZATION: Import only the icons you need (not entire library)
 import { 
   Briefcase, 
   Building2, 
@@ -24,10 +23,10 @@ import {
 import Link from 'next/link';
 import Head from 'next/head';
 import Image from 'next/image';
+import AdUnit from '@/components/ads/AdUnit';
 
-// OPTIMIZATION: Lazy load components that aren't needed immediately
 const AuthModal = dynamic(() => import('@/components/AuthModal'), {
-  ssr: false, // Don't render on server
+  ssr: false,
   loading: () => null
 });
 const RecruiterAuthModal = dynamic(() => import('@/components/RecruiterAuthModal'), {
@@ -59,7 +58,6 @@ interface MatchCircleProps {
   score: number;
 }
 
-// OPTIMIZATION: Move static data outside component (created once, not on every render)
 const RESOURCES = [
   { title: 'Accountant Jobs', slug: 'accountant-jobs' },
   { title: 'Sales Executive Jobs', slug: 'sales-executive-jobs' },
@@ -129,7 +127,6 @@ const FAQS = [
   }
 ] as const;
 
-// OPTIMIZATION: Memoized MatchCircle component
 const MatchCircle: React.FC<MatchCircleProps> = React.memo(({ score }) => {
   let matchColor = '#F87171';
   if (score > 0 && score <= 50) matchColor = '#FBBF24';
@@ -170,27 +167,20 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
   const [processedJobs, setProcessedJobs] = useState<JobWithMatch[]>([]);
   const [matchingInProgress, setMatchingInProgress] = useState(false);
 
-  // OPTIMIZATION 1: Defer auth check to allow immediate render
   useEffect(() => {
-    // Wait 100ms for critical UI to render first
     const authTimer = setTimeout(() => {
       checkAuth();
     }, 100);
-
     return () => clearTimeout(authTimer);
   }, []);
 
-  // OPTIMIZATION 2: Background job processing (non-blocking)
   useEffect(() => {
     if (user) {
-      // Wait 500ms before starting expensive operations
       const processingTimer = setTimeout(() => {
         fetchUserOnboardingDataAndProcessJobs();
       }, 500);
-
       return () => clearTimeout(processingTimer);
     } else {
-      // For non-logged-in users, show jobs immediately without matching
       const jobsWithoutMatch = initialJobs.slice(0, 6).map(job => ({
         ...job,
         matchScore: 0,
@@ -211,12 +201,9 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
     }
   };
 
-  // OPTIMIZATION 3: Combined data fetching to reduce waterfall
   const fetchUserOnboardingDataAndProcessJobs = async () => {
     if (!user?.id) return;
-
     setMatchingInProgress(true);
-
     try {
       const { data: onboardingData, error } = await supabase
         .from('onboarding_data')
@@ -225,7 +212,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
         .single();
 
       if (error || !onboardingData) {
-        // Show jobs without matching if error or no data
         setProcessedJobs(
           initialJobs.slice(0, 6).map(job => ({
             ...job,
@@ -239,7 +225,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
 
       setUserOnboardingData(onboardingData);
 
-      // OPTIMIZATION 4: Use requestIdleCallback for non-critical work
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         requestIdleCallback(() => processJobsWithMatching(initialJobs, onboardingData));
       } else {
@@ -251,22 +236,19 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
     }
   };
 
-  // OPTIMIZATION 5: Chunked processing to maintain UI responsiveness
   const processJobsWithMatching = async (
     jobs: any[],
     onboardingData: UserOnboardingData
   ) => {
-    const CHUNK_SIZE = 3; // Process 3 jobs at a time
+    const CHUNK_SIZE = 3;
     const jobsToProcess = jobs.slice(0, 6);
     const matchCache = matchCacheService.loadMatchCache(user?.id);
     const results: JobWithMatch[] = [];
 
-    // Process jobs in chunks with delays to prevent blocking
     for (let i = 0; i < jobsToProcess.length; i += CHUNK_SIZE) {
       const chunk = jobsToProcess.slice(i, i + CHUNK_SIZE);
       
       const chunkResults = chunk.map(job => {
-        // Check cache first
         const cached = matchCache[job.id];
         let matchScore = 0;
         let breakdown = null;
@@ -291,24 +273,15 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
           const result = scoreJob(jobData, onboardingData);
           matchScore = result.score;
           breakdown = result.breakdown;
-
-          // Cache for future use
           matchCacheService.saveCachedMatch(user?.id, job.id, result);
         }
 
-        return {
-          ...job,
-          matchScore,
-          breakdown,
-        };
+        return { ...job, matchScore, breakdown };
       });
 
       results.push(...chunkResults);
-
-      // OPTIMIZATION 6: Progressive rendering - update UI with each chunk
       setProcessedJobs([...results]);
 
-      // Small delay between chunks to keep UI responsive
       if (i + CHUNK_SIZE < jobsToProcess.length) {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
@@ -321,7 +294,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
     if (type === 'seeker') {
       router.push('/jobs');
     } else {
-      // For recruiters, check if logged in
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setRecruiterModalOpen(true);
@@ -341,18 +313,14 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
         />
         <meta name="keywords" content="jobs, careers, employment, job search, hiring, recruitment, job board" />
         <link rel="canonical" href="https://jobmeter.com" />
-        
-        {/* OPTIMIZATION: Preconnect to critical domains */}
         {process.env.NEXT_PUBLIC_SUPABASE_URL && (
           <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
         )}
-
       </Head>
 
       <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
         {/* Hero Section */}
         <section className="relative px-6 py-16 overflow-hidden">
-          {/* Background Image - Lazy loaded and optimized */}
           <div className="absolute inset-0 z-0">
             <Image
               src="/homepage.webp"
@@ -364,7 +332,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
               sizes="100vw"
               quality={80}
             />
-            {/* Overlay for better text readability */}
             <div className="absolute inset-0 bg-black/40" />
           </div>
           <div className="max-w-4xl mx-auto relative z-10">
@@ -377,7 +344,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
               </p>
             </div>
 
-            {/* Tab Switcher */}
             <div className="flex justify-center mb-6">
               <div className="inline-flex rounded-lg p-1 bg-white/10 backdrop-blur-sm">
                 <button
@@ -405,7 +371,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
               </div>
             </div>
 
-            {/* Tab Content */}
             {activeTab === 'seekers' ? (
               <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto">
                 <div className="flex items-start gap-4 mb-6">
@@ -414,14 +379,13 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
                   </div>
                   <div className="flex-1">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                     Browse Thousands of Jobs
+                      Browse Thousands of Jobs
                     </h2>
                     <p className="text-gray-600">
                       Find opportunities from employers and various job sources.
                     </p>
                   </div>
                 </div>
-
                 <button
                   onClick={() => handleCTAClick('seeker')}
                   className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
@@ -447,8 +411,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
                     </p>
                   </div>
                 </div>
-
-
                 <button
                   onClick={() => handleCTAClick('recruiter')}
                   className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
@@ -460,6 +422,13 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
                 </button>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* ── AD 1: Top banner — high visibility after hero ── */}
+        <section className="px-6 py-4" style={{ backgroundColor: theme.colors.background.muted }}>
+          <div className="max-w-4xl mx-auto">
+            <AdUnit slot="4198231153" format="auto" />
           </div>
         </section>
 
@@ -495,7 +464,7 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
           </div>
         </section>
 
-        {/* Featured Jobs Section - OPTIMIZATION: Shows immediately, matches calculate in background */}
+        {/* Featured Jobs Section */}
         <section className="px-6 py-8" style={{ backgroundColor: theme.colors.background.muted }}>
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -576,7 +545,6 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
                   </Link>
                 ))
               ) : (
-                // OPTIMIZATION: Skeleton loading for better perceived performance
                 Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
@@ -678,6 +646,17 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
                 View All Categories →
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* ── AD 2: In-article mid-page — natural break before locations ── */}
+        <section className="px-6 py-4 bg-white">
+          <div className="max-w-4xl mx-auto">
+            <AdUnit
+              slot="4690286797"
+              format="fluid"
+              layout="in-article"
+            />
           </div>
         </section>
 
@@ -836,7 +815,13 @@ export default function HomePage({ jobs: initialJobs, blogPosts, companies = [] 
           </div>
         </section>
 
-        {/* OPTIMIZATION: Lazy-loaded Auth Modal (only loads when needed) */}
+        {/* ── AD 3: Bottom banner — final impression before footer ── */}
+        <section className="px-6 py-4 bg-gray-50">
+          <div className="max-w-4xl mx-auto">
+            <AdUnit slot="9751041788" format="auto" />
+          </div>
+        </section>
+
         {authModalOpen && <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />}
         {recruiterModalOpen && <RecruiterAuthModal open={recruiterModalOpen} onOpenChange={setRecruiterModalOpen} />}
       </div>

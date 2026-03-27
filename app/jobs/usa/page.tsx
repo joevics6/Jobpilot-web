@@ -1,6 +1,7 @@
 import JobList from '@/components/jobs/JobList';
 import { Metadata } from 'next';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -59,6 +60,12 @@ export default function USAJobsPage() {
       <h3 className="text-xl font-semibold text-gray-900 mb-3">Popular Job Searches in the USA</h3>
       <p className="text-gray-600 mb-4">Among the most searched roles on JobMeter for the United States are: <strong>software engineer jobs in New York</strong>, <strong>nursing jobs in Texas</strong>, <strong>marketing manager jobs in Los Angeles</strong>, <strong>data analyst jobs in Chicago</strong>, <strong>project manager jobs in Washington DC</strong>, <strong>UX designer jobs in San Francisco</strong>, <strong>finance analyst jobs in Boston</strong>, and <strong>customer success manager jobs remote USA</strong>. The platform is updated continuously so every search surfaces current, active listings.</p>
 
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -23,7 +23,10 @@ import {
   Search,
   Share2,
   MessageCircle,
-  Send
+  Send,
+  ChevronRight,
+  BookOpen,
+  PenTool,
 } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import UpgradeModal from '@/components/jobs/UpgradeModal';
@@ -32,22 +35,59 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import AdUnit from '@/components/ads/AdUnit';
 
 // ─── Ad slot IDs ───────────────────────────────────────────────────────────────
-// Each placement MUST use a unique slot ID. Reusing the same slot on one page
-// causes AdSense to silently drop all but the first push({}) call.
 const AD_SLOTS = {
-  BANNER_TOP:    '6866736453',   // jobpage-banner-top      — after job header card
-  IN_ARTICLE:    '5553654784',   // jobpage-inarticle       — after job description
-  BANNER_BOTTOM: '4240573110',   // jobpage-banner-bottom   — end of main content
-  SIDEBAR:       '9189647463',   // jobpage-sidebar         — right column
-  ANCHOR_MOBILE: '3349195672',   // jobpage-anchor-mobile   — sticky bottom bar
-  MULTIPLEX:     '3568104363',   // jobpage-multiplex       — autorelaxed, after similar jobs
+  BANNER_TOP:    '6866736453',
+  IN_ARTICLE:    '5553654784',
+  BANNER_BOTTOM: '4240573110',
+  SIDEBAR:       '9189647463',
+  ANCHOR_MOBILE: '3349195672',
+  MULTIPLEX:     '3568104363',
 } as const;
-// ───────────────────────────────────────────────────────────────────────────────
 
 const STORAGE_KEYS = {
   SAVED_JOBS: 'saved_jobs',
   APPLIED_JOBS: 'applied_jobs',
 };
+
+// ─── Featured Quizzes — hardcoded, zero DB calls ──────────────────────────────
+const FEATURED_QUIZZES = [
+  { name: 'KPMG Recruitment Test Practice', url: 'https://www.jobmeter.app/tools/quiz/kpmg-assessment-practice-test' },
+  { name: 'PwC Recruitment Test Practice', url: 'https://www.jobmeter.app/tools/quiz/pwc-recruitment-assessment-practice-test' },
+  { name: 'Deloitte Recruitment Test Practice', url: 'https://www.jobmeter.app/tools/quiz/deloitte-recruitment-assessment-practice-test' },
+  { name: 'Ernst & Young (EY) Recruitment Test Practice', url: 'https://www.jobmeter.app/tools/quiz/ernst-young-ey-assessment-practice-test' },
+  { name: 'Access Bank Graduate Trainee Aptitude Test', url: 'https://www.jobmeter.app/tools/quiz/access-bank-graduate-trainee-assessment-test' },
+];
+
+// ─── Blog Articles — hardcoded pool, shown randomly ──────────────────────────
+// region: 'nigeria' = shown for NG jobs | 'global' = shown for all jobs
+const ALL_BLOGS = [
+  { title: 'Should You Include Your Photo on Nigerian CVs?', url: 'https://www.jobmeter.app/blog/nigerian-cv-photo-pros-cons-recruiter-tips', region: 'nigeria' },
+  { title: 'What to Wear to Interviews in Lagos vs Abuja', url: 'https://www.jobmeter.app/blog/lagos-vs-abuja-interview-attir-guide', region: 'nigeria' },
+  { title: '10 Certifications That Actually Increase Your Salary in Nigeria', url: 'https://www.jobmeter.app/blog/10-certifications-that-actually-increase-your-salary-in-nigeria', region: 'nigeria' },
+  { title: 'Free Online Courses Nigerians Can Take to Boost Employability', url: 'https://www.jobmeter.app/blog/boost-employability-free-online-courses-for-nigerians', region: 'nigeria' },
+  { title: 'How to Write a CV with No Experience', url: 'https://www.jobmeter.app/blog/write-a-cv-with-no-experience-beginners-guide', region: 'global' },
+  { title: "How to Answer 'Tell Me About Yourself' in Job Interviews", url: 'https://www.jobmeter.app/blog/tell-me-about-yourself-job-interview-nigeria', region: 'global' },
+  { title: '30 Common Bank Interview Questions', url: 'https://www.jobmeter.app/blog/bank-interview-questions-nigeria-ace-job', region: 'global' },
+  { title: 'Is an MBA Worth It in Nigeria? Complete Cost-Benefit Analysis', url: 'https://www.jobmeter.app/blog/is-an-mba-worth-it-nigeria', region: 'nigeria' },
+  { title: 'Office Politics in Nigeria: Survival Guide for New Graduates', url: 'https://www.jobmeter.app/blog/office-politics-nigeria-new-grad-survival-guide', region: 'nigeria' },
+  { title: 'Software Developer Salary in Nigeria', url: 'https://www.jobmeter.app/blog/software-developer-salary-nigeria-2026-your-ultimate-guide', region: 'nigeria' },
+  { title: 'How to Apply for KPMG Internship: Step-by-Step Guide', url: 'https://www.jobmeter.app/blog/kpmg-internship-2026-your-ultimate-application-guide', region: 'nigeria' },
+  { title: 'How to Transition from Banking to Tech (Guide)', url: 'https://www.jobmeter.app/blog/how-to-transition-from-banking-to-tech-in-nigeria-2026-guide', region: 'global' },
+  { title: 'How to Transition from Teaching to Corporate HR', url: 'https://www.jobmeter.app/blog/nigerian-teachers-to-hr-your-career-transition-guide', region: 'global' },
+  { title: 'How to Handle a Difficult Boss in Nigerian Corporate Culture', url: 'https://www.jobmeter.app/blog/navigate-difficult-bosses-nigeria-expert-guide', region: 'nigeria' },
+  { title: 'Virtual Interview Online Preparation Tips', url: 'https://www.jobmeter.app/blog/virtual-interview-tips', region: 'global' },
+  { title: 'Medical & Public Health Salaries in Nigeria', url: 'https://www.jobmeter.app/blog/healthcare-salaries-nigeria-2026-your-guide', region: 'nigeria' },
+  { title: 'Civil, Mechanical & Petroleum Engineering Salaries in Nigeria', url: 'https://www.jobmeter.app/blog/nigeria-engineering-salaries-2026-civil-mech-petro', region: 'nigeria' },
+  { title: 'Top 8 NGOs That Pay Corpers in Abuja (NYSC PPA Guide)', url: 'https://www.jobmeter.app/blog/ngos-that-pay-corpers-in-abuja-2026', region: 'nigeria' },
+  { title: 'Best Paying Companies in Nigeria 2026', url: 'https://www.jobmeter.app/blog/best-paying-companies-in-nigeria-2026-high-salary-jobs-guide', region: 'nigeria' },
+  { title: 'Top 25 Highest Paying Jobs in Nigeria: Best Careers & Salaries', url: 'https://www.jobmeter.app/blog/highest-paying-jobs-in-nigeria', region: 'nigeria' },
+  { title: 'How to Identify Fake Job Offers & Scam Interviews', url: 'https://www.jobmeter.app/blog/spot-fake-jobs--scam-interviews-nigeria', region: 'global' },
+];
+
+// ─── Helper: get random N items from array ────────────────────────────────────
+function getRandomItems<T>(arr: T[], n: number): T[] {
+  return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+}
 
 export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?: any[] }) {
   const router = useRouter();
@@ -69,6 +109,22 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
   const [showEmail, setShowEmail] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
+
+  // ─── Blog randomization — computed once per page load ─────────────────────
+  // Uses job location to determine region filter, then picks 5 random articles.
+  // Nigerians see nigerian + global; international sees global only.
+  const randomBlogs = useMemo(() => {
+    const jobCountry = typeof job.location === 'object'
+      ? (job.location?.country || '')
+      : '';
+    const isNigerianJob = jobCountry === 'NG' || jobCountry.toLowerCase() === 'nigeria';
+
+    const pool = ALL_BLOGS.filter(b =>
+      b.region === 'global' || (isNigerianJob && b.region === 'nigeria')
+    );
+
+    return getRandomItems(pool, 5);
+  }, [job.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
@@ -652,12 +708,12 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                 )}
               </div>
 
-              {/* About Company */}
               {/* ── AD #1: Responsive banner after job header ── */}
               <div className="w-full rounded-lg">
                 <AdUnit key={AD_SLOTS.BANNER_TOP} slot={AD_SLOTS.BANNER_TOP} format="auto" />
               </div>
 
+              {/* About Company */}
               {job.about_company && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900">About the Company</h2>
@@ -680,7 +736,6 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
               )}
 
               {/* ── AD #2: In-article after description ── */}
-              {/* minHeight ensures the fluid ad container is never 0px tall */}
               <div className="w-full rounded-lg" style={{ minHeight: '100px' }}>
                 <AdUnit key={AD_SLOTS.IN_ARTICLE} slot={AD_SLOTS.IN_ARTICLE} format="fluid" layout="in-article" />
               </div>
@@ -1025,11 +1080,46 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
             {/* ═══════════════════════════════════════════════
                 RIGHT COLUMN — Sidebar
             ═══════════════════════════════════════════════ */}
+            {/* RIGHT COLUMN — Sidebar */}
             <div className="lg:col-span-1 space-y-6">
 
               {/* ── Sidebar AD ── */}
               <div className="hidden lg:block w-full rounded-lg">
                 <AdUnit key={AD_SLOTS.SIDEBAR} slot={AD_SLOTS.SIDEBAR} format="auto" />
+              </div>
+
+              {/* ── Practice Assessments ── */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="px-5 py-4 font-semibold text-base flex items-center gap-2" 
+                     style={{ backgroundColor: `${theme.colors.primary.DEFAULT}10`, color: theme.colors.primary.DEFAULT }}>
+                  <PenTool size={16} />
+                  Free Recruitment Practice Test
+                </div>
+                <div className="px-5 py-4">
+                  <ul className="space-y-3">
+                    {FEATURED_QUIZZES.map((quiz, index) => (
+                      <li key={index}>
+                        <a
+                          href={quiz.url}
+                          className="flex items-center gap-2 text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors group"
+                        >
+                          <ChevronRight size={14} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition-colors" />
+                          <span className="group-hover:underline">{quiz.name}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <a
+                      href="https://www.jobmeter.app/tools/quiz"
+                      className="flex items-center gap-1.5 text-sm font-semibold hover:underline"
+                      style={{ color: theme.colors.primary.DEFAULT }}
+                    >
+                      See all assessments
+                      <ChevronRight size={14} />
+                    </a>
+                  </div>
+                </div>
               </div>
 
               {/* Similar Jobs */}
@@ -1082,7 +1172,96 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                 </div>
               )}
 
-              {/* ── Multiplex Ad — autorelaxed, after similar jobs ── */}
+              {/* ── Free Career Tools ── (Moved under Similar Jobs) */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div 
+                  className="px-5 py-4 font-semibold text-base flex items-center gap-2" 
+                  style={{ backgroundColor: `${theme.colors.primary.DEFAULT}10`, color: theme.colors.primary.DEFAULT }}
+                >
+                  <Sparkles size={16} />
+                  Free Career Tools
+                </div>
+                <div className="px-5 py-4">
+                  <ul className="space-y-3">
+                    <li>
+                      <a
+                        href="https://www.jobmeter.app/tools/interview"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors group"
+                      >
+                        <ChevronRight size={14} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition-colors" />
+                        <span className="group-hover:underline">Free Interview Practice</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://www.jobmeter.app/tools/ats-review"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors group"
+                      >
+                        <ChevronRight size={14} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition-colors" />
+                        <span className="group-hover:underline">ATS CV Review</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://www.jobmeter.app/tools/career"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors group"
+                      >
+                        <ChevronRight size={14} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition-colors" />
+                        <span className="group-hover:underline">Career Coach</span>
+                      </a>
+                    </li>
+                  </ul>
+
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <a
+                      href="https://www.jobmeter.app/tools"
+                      className="flex items-center gap-1.5 text-sm font-semibold hover:underline"
+                      style={{ color: theme.colors.primary.DEFAULT }}
+                    >
+                      See all career tools
+                      <ChevronRight size={14} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+
+              {/* ── Career Articles — after similar jobs ── */}
+              {randomBlogs.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="px-5 py-4 font-semibold text-base flex items-center gap-2" style={{ backgroundColor: `${theme.colors.primary.DEFAULT}10`, color: theme.colors.primary.DEFAULT }}>
+                    <BookOpen size={16} />
+                    Read Career Articles
+                  </div>
+                  <div className="px-5 py-4">
+                    <ul className="space-y-3">
+                      {randomBlogs.map((blog, index) => (
+                        <li key={index}>
+                          <a
+                            href={blog.url}
+                            className="flex items-start gap-2 text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors group"
+                          >
+                            <ChevronRight size={14} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 mt-0.5 transition-colors" />
+                            <span className="group-hover:underline leading-snug">{blog.title}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <a
+                        href="https://www.jobmeter.app/blog"
+                        className="flex items-center gap-1.5 text-sm font-semibold hover:underline"
+                        style={{ color: theme.colors.primary.DEFAULT }}
+                      >
+                        See all articles
+                        <ChevronRight size={14} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Multiplex Ad — autorelaxed, after blog section ── */}
               <div className="w-full rounded-lg">
                 <AdUnit key={AD_SLOTS.MULTIPLEX} slot={AD_SLOTS.MULTIPLEX} format="autorelaxed" />
               </div>
@@ -1094,9 +1273,6 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
 
       {/*
         ── Anchor Ad — mobile only, sticky bottom bar ──
-        Hard-clamped to 50px. The inner transform shifts the ad up by 50%
-        of its own rendered height so it stays centred inside the bar.
-        overflow:hidden on both layers kills any bleed.
       */}
       <div
         className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100"

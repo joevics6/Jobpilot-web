@@ -1,6 +1,7 @@
 import { theme } from '@/lib/theme';
 import { Award, Laptop, Home, Globe, Rocket, GraduationCap, Briefcase } from 'lucide-react';
 import { NYSCFinderClient } from './NYSCFinderClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -55,6 +56,8 @@ export default function NYSCFinderPage() {
 
       {/* Client Island */}
       <NYSCFinderClient />
+
+      <AdUnit slot="4198231153" format="auto" />
 
       {/* ── Related Tools ── */}
       <div className="px-4 md:px-6 max-w-7xl mx-auto">
@@ -151,6 +154,7 @@ export default function NYSCFinderPage() {
                 </tbody>
               </table>
             </div>
+
             <p className="text-gray-600 leading-relaxed mb-6">
               Technology roles represent the fastest-growing NYSC job category in 2026, with Nigerian fintech and tech companies actively recruiting corpers as software developers, IT support officers, data analysts, and product interns. Stipends in tech can reach ₦150,000–₦200,000 monthly — significantly above the standard federal allawee — making a tech PPA one of the most financially rewarding placements available. Oil and gas roles in Rivers State, Delta, and Bayelsa also rank highly for corpers willing to take on field-adjacent assignments.
             </p>
@@ -274,6 +278,8 @@ export default function NYSCFinderPage() {
         </div>
       </div>
 
+      <AdUnit slot="9751041788" format="auto" />
+
       {/* ── Schema Markup ── */}
       <script
         type="application/ld+json"
@@ -351,6 +357,12 @@ export default function NYSCFinderPage() {
           ])
         }}
       />
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { theme } from '@/lib/theme';
 import ScamCheckerClient from './ScamCheckerClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -37,6 +38,12 @@ export default function ScamCheckerPage() {
           </div>
         </div>
       </div>
+
+      {/* Ad 1: Display Top - After How It Works */}
+      <div className="max-w-4xl mx-auto px-6 py-6">
+        <AdUnit slot="4198231153" format="auto" />
+      </div>
+
       <ScamCheckerClient />
       <div className="px-6 py-6 max-w-4xl mx-auto mt-4">
         <div className="space-y-8">
@@ -65,6 +72,8 @@ export default function ScamCheckerPage() {
               <div><h3 className="font-semibold text-gray-900 mb-1">5. Visa and Relocation Scams</h3><p className="text-sm text-gray-700">International job offers requiring upfront visa, processing, or travel payments are a major red flag. This is especially prevalent in searches for a <strong>job scammer list Dubai</strong> and <strong>job scammer list Malaysia</strong>.</p></div>
             </div>
           </div>
+
+          {/* Ad 2: In-article fluid - After Types of Job Scams */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Country &amp; Region–Specific Job Scammer Lists</h2>
             <p className="text-gray-700 mb-4">Our tool can be combined with local <strong>job scammer list</strong> resources for stronger protection:</p>
@@ -102,6 +111,7 @@ export default function ScamCheckerPage() {
               ))}
             </div>
           </div>
+
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
             <h2 className="text-xl font-bold text-gray-900 mb-5">Frequently Asked Questions</h2>
             <div className="space-y-5 divide-y divide-gray-100">
@@ -123,6 +133,12 @@ export default function ScamCheckerPage() {
             </div>
           </div>
         </div>
+
+        {/* Ad 4: Display Bottom - Before JSON-LD */}
+        <div className="mt-6">
+          <AdUnit slot="9751041788" format="auto" />
+        </div>
+
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "WebApplication", "name": "Job Scammer Checker",
           "description": "Free scam jobs check tool. Search and report fraudulent companies, recruiters and job postings. Covers Nigeria, Canada, Australia, Dubai, Malaysia and remote jobs.",
@@ -134,6 +150,12 @@ export default function ScamCheckerPage() {
             { "@type": "Question", "name": "How to report a job scammer?", "acceptedAnswer": { "@type": "Answer", "text": "Report on the job platform, to your national fraud agency, and submit details using the form on this page to warn other job seekers." } }
           ] }
         }) }} />
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
       </div>
     </div>
   );

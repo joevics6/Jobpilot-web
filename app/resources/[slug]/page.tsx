@@ -5,6 +5,7 @@ import CategoryJobList, { RawJobRow } from '@/components/category/CategoryJobLis
 import CategoryContent from '@/components/category/CategoryContent';
 import Link from 'next/link';
 import { ArrowLeft, Briefcase, MapPin } from 'lucide-react';
+import AdUnit from '@/components/ads/AdUnit';
 
 // Cache forever — page is fully static until a new deploy or on-demand
 // revalidation clears it. This is what Vercel's "cache infinitely" maps to
@@ -341,6 +342,14 @@ export default async function CategoryPage({ params }: { params: { slug: string 
               </div>
             </section>
           )}
+        </div>
+      </div>
+
+      <AdUnit slot="9751041788" format="auto" />
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </>

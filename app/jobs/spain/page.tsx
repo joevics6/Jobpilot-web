@@ -1,6 +1,7 @@
 import JobList from '@/components/jobs/JobList';
 import { Metadata } from 'next';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -54,6 +55,12 @@ export default function SpainJobsPage() {
       <h3 className="text-xl font-semibold text-gray-900 mb-3">Popular Job Searches in Spain</h3>
       <p className="text-gray-600 mb-4">Top searches on JobMeter for Spain include: <strong>software developer jobs in Barcelona</strong>, <strong>finance jobs in Madrid</strong>, <strong>renewable energy jobs in Spain</strong>, <strong>jobs in Spain for English speakers</strong>, <strong>digital nomad visa eligible jobs in Spain</strong>, <strong>hospitality jobs in Barcelona</strong>, <strong>data analyst jobs in Madrid</strong>, and <strong>remote jobs in Spain</strong>. All listings are verified and updated daily.</p>
 
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </>

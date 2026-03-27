@@ -1,6 +1,7 @@
 import JobList from '@/components/jobs/JobList';
 import { Metadata } from 'next';
 import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -53,6 +54,12 @@ export default function NewZealandJobsPage() {
       <h3 className="text-xl font-semibold text-gray-900 mb-3">Popular Job Searches in New Zealand</h3>
       <p className="text-gray-600 mb-4">Top searches on JobMeter for New Zealand include: <strong>nursing jobs in New Zealand for overseas nurses</strong>, <strong>software developer jobs in Auckland</strong>, <strong>construction jobs in Christchurch</strong>, <strong>government jobs in Wellington</strong>, <strong>agriculture jobs in New Zealand</strong>, <strong>jobs in New Zealand with visa sponsorship</strong>, <strong>remote jobs in New Zealand</strong>, and <strong>healthcare jobs in New Zealand for international applicants</strong>. All listings are verified and updated daily.</p>
 
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </>

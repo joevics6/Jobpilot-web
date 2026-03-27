@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { CareerCoachService, CareerCoachResult } from '@/lib/services/careerCoachService';
 import { theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import AdUnit from '@/components/ads/AdUnit';
 
 type TabType = 'paths' | 'skills' | 'insights';
 
@@ -185,6 +186,11 @@ export default function CareerClient() {
             <p className="text-gray-600 max-w-md mx-auto">Based on your profile, skills, and experience, you&apos;re well-positioned for career advancement. Focus on the recommendations below to improve further.</p>
           </div>
         </div>
+      </div>
+
+      {/* ── [AD: between score card and tabs] ────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <AdUnit slot="4690286797" format="fluid" layout="in-article" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

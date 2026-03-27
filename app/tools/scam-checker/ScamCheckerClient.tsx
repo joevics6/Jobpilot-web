@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Shield, AlertTriangle, CheckCircle, XCircle, Flag, Loader2, Info, ExternalLink, Phone, Mail, Globe, FileText, Briefcase, Star } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import AdUnit from '@/components/ads/AdUnit';
 
 interface Entity {
   id: string; entity_type: string; company_name: string; aliases: string[];
@@ -129,6 +130,11 @@ export default function ScamCheckerClient() {
         </div>
       </div>
 
+      {/* ── [AD: below warning banner] ─────────────────────────────── */}
+      <div className="mb-6">
+        <AdUnit slot="4690286797" format="fluid" layout="in-article" />
+      </div>
+
       <div className="bg-white rounded-2xl p-6 shadow-sm mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Search size={20} className="text-blue-600" />Check a Company or Recruiter</h2>
         <div className="relative">
@@ -207,7 +213,12 @@ export default function ScamCheckerClient() {
       })()}
 
       {selectedEntity && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
+        <>
+          {/* ── [AD: before entity detail] ───────────────────────────── */}
+          <div className="mb-6">
+            <AdUnit slot="8181708196" format="fluid" layout="in-article" />
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
           <div className="flex items-start justify-between mb-4">
             <div><h2 className="text-xl font-bold text-gray-900">{selectedEntity.company_name}</h2><p className="text-sm text-gray-500 capitalize">{selectedEntity.entity_type}</p></div>
             {(() => { const status = getStatusBadge(selectedEntity.verification_status); const StatusIcon = status.icon; return (<span className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 ${status.color}`}><StatusIcon size={16} />{status.label}</span>); })()}
@@ -233,6 +244,7 @@ export default function ScamCheckerClient() {
           )}
           <button onClick={() => { setFormData({ ...formData, company_name: selectedEntity.company_name, website: selectedEntity.website || '' }); setShowReportForm(true); }} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"><Flag size={16} />Report Additional Issue</button>
         </div>
+        </>
       )}
 
       <div className="bg-white rounded-2xl p-6 shadow-sm mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>

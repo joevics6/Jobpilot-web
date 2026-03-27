@@ -11,6 +11,7 @@ import { MatchBreakdownModalData } from '@/components/jobs/MatchBreakdownModal';
 import { Briefcase, Globe, Search, Filter, X, Laptop, Home, GraduationCap, Award, Rocket, ClipboardList, Wifi } from 'lucide-react';
 import { scoreJob, JobRow, UserOnboardingData } from '@/lib/matching/matchEngine';
 import { matchCacheService } from '@/lib/matching/matchCache';
+import AdUnit from '@/components/ads/AdUnit';
 
 const STORAGE_KEYS = { SAVED_JOBS: 'saved_jobs', APPLIED_JOBS: 'applied_jobs' };
 const JOBS_PER_PAGE = 20;
@@ -281,9 +282,22 @@ export default function VisaFinderClient() {
               <p className="text-sm text-center" style={{ color: theme.colors.text.secondary }}>{hasFilters ? 'Try adjusting your filters' : 'Check back later for new opportunities with visa sponsorship'}</p>
               {hasFilters && <button onClick={clearFilters} className="mt-4 text-blue-600 hover:underline">Clear filters</button>}
             </div>
-          ) : sortedJobs.map((job) => (
-            <JobCard key={job.id} job={job} savedJobs={savedJobs} appliedJobs={appliedJobs} onSave={handleSave} onApply={handleApply} onShowBreakdown={handleShowBreakdown} showMatch={false} />
-          ))}
+          ) : (() => {
+              const items: React.ReactNode[] = [];
+              sortedJobs.forEach((job, idx) => {
+                items.push(
+                  <JobCard key={job.id} job={job} savedJobs={savedJobs} appliedJobs={appliedJobs} onSave={handleSave} onApply={handleApply} onShowBreakdown={handleShowBreakdown} showMatch={false} />
+                );
+                if ((idx + 1) % 5 === 0 && idx !== sortedJobs.length - 1) {
+                  items.push(
+                    <div key={`ad-${idx}`} className="px-4 py-2 border-b" style={{ borderColor: 'inherit' }}>
+                      <AdUnit slot="9025117620" format="fluid" layoutKey="-fb+5w+4e-db+86" />
+                    </div>
+                  );
+                }
+              });
+              return items;
+            })()}
         </div>
       </div>
       {totalPages > 1 && (

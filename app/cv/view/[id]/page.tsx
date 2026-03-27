@@ -14,6 +14,7 @@ import { CVData } from '@/lib/types/cv';
 import { StructuredCoverLetter } from '@/lib/types/coverLetter';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import AdUnit from '@/components/ads/AdUnit';
 
 interface CVDocument {
   id: string;
@@ -1176,6 +1177,14 @@ function CoverLetterEditForm({
           )}
         </div>
       )}
+    </div>
+
+    <AdUnit slot="9751041788" format="auto" />
+
+    <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+        <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+      </div>
     </div>
   );
 }

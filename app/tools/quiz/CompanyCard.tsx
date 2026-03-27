@@ -2,7 +2,6 @@
 "use client";
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useState } from 'react';
 import { companyToSlug } from '@/lib/quizCompanies';
 
@@ -55,7 +54,14 @@ export default function CompanyCard({ company }: CompanyCardProps) {
   const { bg, text } = getCompanyColor(company);
   const initials = getInitials(company);
   const shortName = getShortName(company);
+  // Start with imgError=true so we always show the initials avatar
+  // and only flip to false if the <img> loads successfully.
+  // This avoids the broken-image state where neither the logo nor
+  // the initials is visible.
+  const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  const showInitials = imgError || !imgLoaded;
 
   return (
     <Link
@@ -65,19 +71,29 @@ export default function CompanyCard({ company }: CompanyCardProps) {
     >
       {/* Logo or initials avatar */}
       <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-        style={{ backgroundColor: imgError ? bg : undefined }}
+        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden relative"
+        style={{ backgroundColor: showInitials ? bg : 'transparent' }}
       >
-        {!imgError ? (
-          <Image
+        {/* Always render img so onLoad/onError can fire, but hide it until loaded */}
+        {!imgError && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={`/quiz-logos/${slug}.png`}
             alt={`${shortName} logo`}
             width={48}
             height={48}
             className="w-full h-full object-contain"
-            onError={() => setImgError(true)}
+            style={{ display: imgLoaded ? 'block' : 'none' }}
+            onLoad={() => setImgLoaded(true)}
+            onError={() => {
+              setImgLoaded(false);
+              setImgError(true);
+            }}
           />
-        ) : (
+        )}
+
+        {/* Initials fallback — shown while image is loading or if image fails */}
+        {showInitials && (
           <span
             className="text-sm font-bold tracking-wide"
             style={{ color: text }}
@@ -88,9 +104,7 @@ export default function CompanyCard({ company }: CompanyCardProps) {
       </div>
 
       {/* Company name */}
-      <span
-        className="text-xs font-semibold text-center text-gray-800 leading-snug group-hover:text-blue-700 transition-colors line-clamp-2"
-      >
+      <span className="text-xs font-semibold text-center text-gray-800 leading-snug group-hover:text-blue-700 transition-colors line-clamp-2">
         {shortName}
       </span>
     </Link>

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calculator, Info, AlertCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import PAYECalculatorClient from './PAYECalculatorClient';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -49,6 +50,11 @@ export default function PAYECalculatorPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Ad 1: Display Top - After How It Works */}
+      <div className="px-6 py-6 max-w-4xl mx-auto">
+        <AdUnit slot="4198231153" format="auto" />
       </div>
 
       <div className="px-6 py-6 max-w-4xl mx-auto">
@@ -352,6 +358,9 @@ export default function PAYECalculatorPage() {
             </div>
           </div>
 
+          {/* Ad 4: Display Bottom */}
+          <AdUnit slot="9751041788" format="auto" />
+
           {/* JSON-LD Schema */}
           <script
             type="application/ld+json"
@@ -367,6 +376,12 @@ export default function PAYECalculatorPage() {
               })
             }}
           />
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
         </div>
       </div>
     </div>

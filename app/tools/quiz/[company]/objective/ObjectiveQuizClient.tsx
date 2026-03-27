@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { quizSupabase } from '@/lib/quizSupabase';
 import { theme } from '@/lib/theme';
 import { ArrowLeft, Check, X, Loader2, Send, RotateCcw } from 'lucide-react';
+import AdUnit from '@/components/ads/AdUnit';
 
 interface ObjectiveQuestion {
   id: string;
@@ -326,6 +327,11 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
             <span className="text-white text-sm font-medium bg-white/20 px-2 py-1 rounded">{formatTime(timeSpent)}</span>
           )}
         </div>
+      </div>
+
+      {/* ── [AD: below exit bar] — above first question, mobile only ─── */}
+      <div className="lg:hidden px-4 py-2">
+        <AdUnit slot="4198231153" format="auto" />
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-4">

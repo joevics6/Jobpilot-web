@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, FileText, Briefcase, MessageCircle, GraduationCap, Brain, Shield, Calculator, FileCheck, XCircle } from 'lucide-react';
+import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
 
@@ -39,6 +40,11 @@ export default function KeywordCheckerPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Ad 1: Display Top - After How It Works */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <AdUnit slot="4198231153" format="auto" />
       </div>
 
       <div className="border-t border-gray-200 pt-8 mb-10 mt-8">
@@ -145,6 +151,8 @@ export default function KeywordCheckerPage() {
             ))}
           </ol>
         </div>
+
+        {/* Ad 2: In-article fluid - After How It Works section */}
         <div>
           <h3 className="text-xl font-bold text-gray-900 mb-3">Best Keywords to Use in a Resume by Role</h3>
           <p className="mb-4">The best keywords for your resume depend entirely on the role. Here are high-value resume keywords and phrases for common positions:</p>
@@ -215,6 +223,7 @@ export default function KeywordCheckerPage() {
             ))}
           </ul>
         </div>
+
         <div>
           <h3 className="text-xl font-bold text-gray-900 mb-3">Frequently Asked Questions</h3>
           <div className="space-y-4">
@@ -235,6 +244,11 @@ export default function KeywordCheckerPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Ad 4: Display Bottom - Before JSON-LD */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <AdUnit slot="9751041788" format="auto" />
       </div>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -275,6 +289,12 @@ export default function KeywordCheckerPage() {
           { "@type": "ListItem", "position": 3, "name": "CV Keyword Checker", "item": "https://jobmeter.com/tools/keyword-checker" }
         ]
       }) }} />
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>
+          <AdUnit slot="3349195672" format="auto" style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }} />
+        </div>
+      </div>
     </div>
   );
 }

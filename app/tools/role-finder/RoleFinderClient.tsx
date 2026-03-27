@@ -5,6 +5,7 @@ import { Search, X, ChevronDown, Sparkles, Briefcase, Award, TrendingUp, ArrowRi
 import { theme } from '@/lib/theme';
 import { SKILLS_CATEGORIES, POPULAR_TOOLS } from '@/lib/constants/skills';
 import { supabase } from '@/lib/supabase';
+import AdUnit from '@/components/ads/AdUnit';
 
 interface Role {
   role: string; seniority: string; description: string;
@@ -144,6 +145,10 @@ export default function RoleFinderClient() {
             <p className="text-white/90">{result.summary}</p>
             <div className="mt-4 flex items-center gap-2 text-sm"><TrendingUp size={16} /><span>{result.roles.length} roles matched based on your {selectedSkills.length} skills</span></div>
           </div>
+
+          {/* ── [AD: between summary and role cards] ─────────────────── */}
+          <AdUnit slot="4690286797" format="fluid" layout="in-article" />
+
           <div className="grid gap-4">
             {result.roles.map((role, index) => (
               <div key={index} className="bg-white rounded-xl p-5 shadow-sm" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>

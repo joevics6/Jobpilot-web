@@ -26,6 +26,72 @@ interface SavedJob {
   breakdown?: any;
 }
 
+// ─── Ad Components ────────────────────────────────────────────────────────────
+
+declare global {
+  interface Window {
+    adsbygoogle: any[];
+  }
+}
+
+const AdTopDisplay = () => {
+  useEffect(() => {
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+  }, []);
+  return (
+    <div className="mb-4">
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-client="ca-pub-1119289641389825"
+        data-ad-slot="4198231153"
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+};
+
+const AdInFeed = ({ index }: { index: number }) => {
+  useEffect(() => {
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+  }, []);
+  return (
+    <div className="my-2">
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-format="fluid"
+        data-ad-layout-key="-fb+5w+4e-db+86"
+        data-ad-client="ca-pub-1119289641389825"
+        data-ad-slot="9025117620"
+      />
+    </div>
+  );
+};
+
+// Alternates between two in-article slots
+const AdInArticle = ({ nth }: { nth: number }) => {
+  useEffect(() => {
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+  }, []);
+  const slot = nth % 2 === 0 ? '4690286797' : '8181708196';
+  return (
+    <div className="my-2">
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block', textAlign: 'center' }}
+        data-ad-layout="in-article"
+        data-ad-format="fluid"
+        data-ad-client="ca-pub-1119289641389825"
+        data-ad-slot={slot}
+      />
+    </div>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function SavedPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'saved' | 'applied'>('saved');
@@ -43,32 +109,24 @@ export default function SavedPage() {
   }, []);
 
   useEffect(() => {
-    // Fetch onboarding data if user is authenticated
     if (user) {
       fetchUserOnboardingData();
     } else {
-      // If no user, set userOnboardingData to empty so we know it's "loaded"
       setUserOnboardingData(null);
     }
   }, [user]);
 
   useEffect(() => {
-    // Load jobs when we have job IDs and know the user/auth state
     if (savedJobIds.length > 0 || appliedJobIds.length > 0) {
-      // If user exists, wait for onboarding data to be loaded (including null = no data)
-      // If no user, proceed immediately
       if (user && userOnboardingData === undefined) {
-        // Still loading onboarding data, wait
         return;
       }
-      // Either we have user + onboarding data loaded, or no user - proceed
       fetchJobDetails();
     } else {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedJobIds, appliedJobIds, user, userOnboardingData]);
-
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -87,7 +145,7 @@ export default function SavedPage() {
         .eq('user_id', user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching onboarding data:', error);
         return;
       }
@@ -104,7 +162,6 @@ export default function SavedPage() {
           sector: data.sector || null,
         });
       } else {
-        // Set to empty object so we know it's loaded even if no data
         setUserOnboardingData({});
       }
     } catch (error) {
@@ -132,35 +189,26 @@ export default function SavedPage() {
 
   const processJobsWithMatching = useCallback(async (jobRows: any[]): Promise<SavedJob[]> => {
     if (!user || !userOnboardingData) {
-      // If no user or onboarding data, return jobs without matching (0% match)
-      return jobRows.map((job: any) => {
-        return transformJobToSavedJob(job, 0, null);
-      });
+      return jobRows.map((job: any) => transformJobToSavedJob(job, 0, null));
     }
 
-    // Load match cache
     const matchCache = matchCacheService.loadMatchCache(user.id);
     let cacheNeedsUpdate = false;
     const updatedCache = { ...matchCache };
-
-    // Process jobs
     const processedJobs: SavedJob[] = [];
 
     for (const job of jobRows) {
       try {
-        // Check cache first
         let matchResult;
         const cachedMatch = updatedCache[job.id];
 
         if (cachedMatch) {
-          // Use cached match
           matchResult = {
             score: cachedMatch.score,
             breakdown: cachedMatch.breakdown,
             computedAt: cachedMatch.cachedAt,
           };
         } else {
-          // Calculate new match
           const jobRow: JobRow = {
             role: job.role || job.title,
             related_roles: job.related_roles,
@@ -176,7 +224,6 @@ export default function SavedPage() {
 
           matchResult = scoreJob(jobRow, userOnboardingData);
 
-          // Store in cache
           updatedCache[job.id] = {
             score: matchResult.score,
             breakdown: matchResult.breakdown,
@@ -185,7 +232,6 @@ export default function SavedPage() {
           cacheNeedsUpdate = true;
         }
 
-        // Calculate total from breakdown
         const rsCapped = Math.min(
           80,
           matchResult.breakdown.rolesScore +
@@ -207,7 +253,6 @@ export default function SavedPage() {
       }
     }
 
-    // Save updated cache
     if (cacheNeedsUpdate) {
       matchCacheService.saveMatchCache(user.id, updatedCache);
     }
@@ -264,10 +309,7 @@ export default function SavedPage() {
 
       if (error) throw error;
 
-      // Process jobs with matching
       const processedJobs = await processJobsWithMatching(data || []);
-
-      // Separate saved and applied jobs
       const saved = processedJobs.filter(job => savedJobIds.includes(job.id));
       const applied = processedJobs.filter(job => appliedJobIds.includes(job.id));
 
@@ -282,7 +324,6 @@ export default function SavedPage() {
 
   const handleUnsave = (jobId: string) => {
     if (typeof window === 'undefined') return;
-
     const updated = savedJobIds.filter(id => id !== jobId);
     setSavedJobIds(updated);
     setSavedJobs(savedJobs.filter(j => j.id !== jobId));
@@ -291,7 +332,6 @@ export default function SavedPage() {
 
   const handleUnapply = (jobId: string) => {
     if (typeof window === 'undefined') return;
-
     const updated = appliedJobIds.filter(id => id !== jobId);
     setAppliedJobIds(updated);
     setAppliedJobs(appliedJobs.filter(j => j.id !== jobId));
@@ -300,39 +340,32 @@ export default function SavedPage() {
 
   const handleRefresh = async () => {
     if (!user || typeof window === 'undefined') return;
-    
-    // Clear match cache to force recalculation
+
     matchCacheService.clearMatchCache(user.id);
-    
-    // Get latest job IDs directly from localStorage
     let currentSavedIds: string[] = [];
     let currentAppliedIds: string[] = [];
-    
+
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SAVED_JOBS);
       const applied = localStorage.getItem(STORAGE_KEYS.APPLIED_JOBS);
-      
       if (saved) currentSavedIds = JSON.parse(saved);
       if (applied) currentAppliedIds = JSON.parse(applied);
-      
-      // Update state
       setSavedJobIds(currentSavedIds);
       setAppliedJobIds(currentAppliedIds);
     } catch (e) {
       console.error('Error loading job IDs:', e);
       return;
     }
-    
+
     const allJobIds = [...new Set([...currentSavedIds, ...currentAppliedIds])];
-    
+
     if (allJobIds.length === 0) {
       setSavedJobs([]);
       setAppliedJobs([]);
       setLoading(false);
       return;
     }
-    
-    // Fetch fresh job details
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -342,10 +375,7 @@ export default function SavedPage() {
 
       if (error) throw error;
 
-      // Process jobs with matching
       const processedJobs = await processJobsWithMatching(data || []);
-
-      // Separate saved and applied jobs
       const saved = processedJobs.filter(job => currentSavedIds.includes(job.id));
       const applied = processedJobs.filter(job => currentAppliedIds.includes(job.id));
 
@@ -364,18 +394,98 @@ export default function SavedPage() {
     return theme.colors.match.bad;
   };
 
-  const filteredJobs = activeTab === 'saved' 
-    ? savedJobs.filter(j => !appliedJobIds.includes(j.id)) 
+  const filteredJobs = activeTab === 'saved'
+    ? savedJobs.filter(j => !appliedJobIds.includes(j.id))
     : appliedJobs;
+
+  // Build list items with in-feed ads injected every 7 cards
+  const renderJobList = () => {
+    const items: React.ReactNode[] = [];
+    let adBreakCount = 0;
+
+    filteredJobs.forEach((job, index) => {
+      // Insert in-feed ad before every 7th card (positions 6, 13, 20...)
+      if (index > 0 && index % 7 === 0) {
+        items.push(
+          <AdInFeed key={`ad-feed-${index}`} index={adBreakCount} />
+        );
+        adBreakCount++;
+      }
+
+      items.push(
+        <Link key={job.id} href={`/jobs/${job.id}`}>
+          <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold mb-1 text-gray-900 truncate">
+                  {job.title}
+                </h3>
+                <p className="text-sm font-medium mb-3 text-gray-600">
+                  {job.company}
+                </p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} className="text-gray-500" />
+                    <span className="text-xs text-gray-600">{job.location}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center"
+                  style={{
+                    borderColor: getMatchColor(job.calculatedTotal || job.match || 0),
+                    backgroundColor: theme.colors.background.muted,
+                  }}
+                >
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: getMatchColor(job.calculatedTotal || job.match || 0) }}
+                  >
+                    {job.calculatedTotal || job.match || 0}%
+                  </span>
+                  <span className="text-[10px] font-medium text-gray-500">Match</span>
+                </div>
+                {activeTab === 'saved' && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleUnsave(job.id);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                  >
+                    Unsave
+                  </button>
+                )}
+                {activeTab === 'applied' && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleUnapply(job.id);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </Link>
+      );
+    });
+
+    return items;
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
       {/* Header */}
       <div
         className="pt-12 pb-8 px-6"
-        style={{
-          backgroundColor: theme.colors.primary.DEFAULT,
-        }}
+        style={{ backgroundColor: theme.colors.primary.DEFAULT }}
       >
         <div className="flex items-center justify-between">
           <div>
@@ -393,7 +503,7 @@ export default function SavedPage() {
 
       {/* Tabs */}
       <div className="px-6 pt-6">
-        <div className="flex gap-2 bg-gray-100 rounded-lg p-1 mb-6">
+        <div className="flex gap-2 bg-gray-100 rounded-lg p-1 mb-4">
           <button
             onClick={() => setActiveTab('saved')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-md font-medium transition-colors ${
@@ -417,6 +527,9 @@ export default function SavedPage() {
             <span>Applied ({appliedJobs.length})</span>
           </button>
         </div>
+
+        {/* Top display ad — below tabs, above job list */}
+        <AdTopDisplay />
       </div>
 
       {/* Jobs List */}
@@ -445,74 +558,10 @@ export default function SavedPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredJobs.map((job) => (
-              <Link key={job.id} href={`/jobs/${job.id}`}>
-                <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold mb-1 text-gray-900 truncate">
-                        {job.title}
-                      </h3>
-                      <p className="text-sm font-medium mb-3 text-gray-600">
-                        {job.company}
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={14} className="text-gray-500" />
-                          <span className="text-xs text-gray-600">{job.location}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <div
-                        className="w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center"
-                        style={{
-                          borderColor: getMatchColor(job.calculatedTotal || job.match || 0),
-                          backgroundColor: theme.colors.background.muted,
-                        }}
-                      >
-                        <span
-                          className="text-sm font-bold"
-                          style={{ color: getMatchColor(job.calculatedTotal || job.match || 0) }}
-                        >
-                          {job.calculatedTotal || job.match || 0}%
-                        </span>
-                        <span className="text-[10px] font-medium text-gray-500">Match</span>
-                      </div>
-                      {activeTab === 'saved' && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleUnsave(job.id);
-                          }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                        >
-                          Unsave
-                        </button>
-                      )}
-                      {activeTab === 'applied' && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleUnapply(job.id);
-                          }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+            {renderJobList()}
           </div>
         )}
       </div>
     </div>
   );
 }
-
-
