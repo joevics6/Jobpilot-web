@@ -1217,7 +1217,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
                 </>
               )}
 
-              {activeTab === 'matches' && (
+              {activeTab !== 'latest' && (
                 <>
                   {loading ? (
                     <div className="flex flex-col items-center justify-center py-16">
