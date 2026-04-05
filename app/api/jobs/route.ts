@@ -3,12 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { Redis } from '@upstash/redis';
 
 const FIELDS = 'id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, job_type, role, related_roles, ai_enhanced_roles, skills_required, ai_enhanced_skills, experience_level';
-const CACHE_TTL     = 3600;   // 1 hour — primary Redis cache
-const STALE_TTL     = 86400;  // 24 h  — stale fallback
-const COOLDOWN_SECS = 3600;   // 1 hour — minimum gap between cache busts
+const STALE_TTL     = 86400;             // 24 h  — stale fallback
+const COOLDOWN_SECS = 3600;             // 1 hour — min gap between cache busts
 const CACHE_KEY     = 'jobs:all';
 const STALE_KEY     = 'jobs:all:stale';
-const VERSION_KEY   = 'jobs:cache:version';   // bumped on bust — tells clients to drop sessionStorage
 const COOLDOWN_KEY  = 'jobs:cache:last_bust'; // unix timestamp of last successful bust
 
 const redis = new Redis({
@@ -23,65 +21,40 @@ function getSupabase() {
   );
 }
 
-// ── Helper: safely parse whatever Upstash returns ────────────────────────────
-function parseRedisValue(raw: unknown): unknown[] | null {
-  if (!raw) return null;
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const adminSecret = searchParams.get('admin_secret');
 
-  // ── Lightweight version check — 1 Redis read, no Supabase ────────────────
-  if (searchParams.get('check') === 'version') {
-    try {
-      const version = await redis.get<string>(VERSION_KEY);
-      return NextResponse.json(
-        { cacheVersion: version ?? null },
-        { headers: { 'Cache-Control': 'no-store' } }
-      );
-    } catch {
-      return NextResponse.json(
-        { cacheVersion: null },
-        { headers: { 'Cache-Control': 'no-store' } }
-      );
-    }
-  }
-
-  // ── Admin: cooldown-gated cache bust ──────────────────────────────────────
+  // ── Admin: 1-hour cooldown-gated cache bust ───────────────────────────────
+  // Call: /api/jobs?action=bust_cache&admin_secret=YOUR_SECRET
+  // Only busts once per hour even if jobs are posted continuously
   if (searchParams.get('action') === 'bust_cache') {
     const expectedSecret = process.env.ADMIN_CACHE_SECRET;
+    const adminSecret = searchParams.get('admin_secret');
+
     if (!expectedSecret || adminSecret !== expectedSecret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
     try {
       const now = Math.floor(Date.now() / 1000);
       const lastBust = await redis.get<number>(COOLDOWN_KEY);
 
-      // If a bust happened within the cooldown window, skip silently
+      // Still within the 1-hour cooldown — skip silently
       if (lastBust && now - lastBust < COOLDOWN_SECS) {
         const retryIn = COOLDOWN_SECS - (now - lastBust);
         console.log(`[jobs-api] Bust skipped — cooldown active, retry in ${retryIn}s`);
         return NextResponse.json({ skipped: true, retry_in_seconds: retryIn });
       }
 
-      // Cooldown passed — bust cache, bump version, record timestamp
-      const newVersion = Date.now().toString();
+      // Cooldown passed — delete cache and record timestamp
       await Promise.all([
         redis.del(CACHE_KEY),
         redis.del(STALE_KEY),
-        redis.set(VERSION_KEY, newVersion),                   // no TTL — version is permanent
-        redis.set(COOLDOWN_KEY, now, { ex: COOLDOWN_SECS }),  // expires after cooldown window
+        redis.set(COOLDOWN_KEY, now, { ex: COOLDOWN_SECS }),
       ]);
 
-      console.log(`[jobs-api] Cache busted — new version: ${newVersion}`);
-      return NextResponse.json({ success: true, version: newVersion });
+      console.log('[jobs-api] Cache busted');
+      return NextResponse.json({ success: true });
     } catch (err) {
       console.error('[jobs-api] Cache bust error:', err);
       return NextResponse.json({ error: 'Cache bust failed' }, { status: 500 });
@@ -89,27 +62,23 @@ export async function GET(request: Request) {
   }
 
   try {
-    // ── 1+2. Read version + primary cache in one round-trip ──────────────
-    // mget cuts 2 Redis commands down to 1 on every request
-    let cacheVersion: string | null = null;
-    let cached: unknown[] | null = null;
-    try {
-      const [rawVersion, rawCache] = await redis.mget(VERSION_KEY, CACHE_KEY);
-      cacheVersion = rawVersion ? String(rawVersion) : null;
-      cached = parseRedisValue(rawCache);
-    } catch {
-      // non-fatal — fall through to Supabase
-    }
+    // ── 1. Check Redis cache ──────────────────────────────────────────────
+    const cached = await redis.get<any[]>(CACHE_KEY);
 
     if (cached) {
-      console.log(`[jobs-api] Cache HIT — ${cached.length} jobs`);
+      console.log(`[jobs-api] Cache HIT — ${cached.length} jobs from Redis`);
       return NextResponse.json(
-        { jobs: cached, total: cached.length, source: 'cache', cacheVersion },
-        { headers: { 'Cache-Control': 'no-store' } }
+        { jobs: cached, total: cached.length, source: 'cache' },
+        {
+          headers: {
+            'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=120',
+            'Vary': 'Accept-Encoding',
+          },
+        }
       );
     }
 
-    // ── 3. Cache MISS — fetch from Supabase ──────────────────────────────
+    // ── 2. Cache MISS — fetch from Supabase ──────────────────────────────
     console.log('[jobs-api] Cache MISS — fetching from Supabase');
     const supabase = getSupabase();
 
@@ -129,35 +98,37 @@ export async function GET(request: Request) {
     if (error) {
       console.error('[jobs-api] Supabase error:', error);
 
-      // Serve stale fallback on Supabase failure
-      const staleRaw = await redis.get(STALE_KEY);
-      const stale = parseRedisValue(staleRaw);
+      // Serve stale fallback if Supabase fails
+      const stale = await redis.get<any[]>(STALE_KEY);
       if (stale) {
-        console.warn('[jobs-api] Serving STALE fallback cache');
+        console.warn('[jobs-api] Serving stale fallback');
         return NextResponse.json(
-          { jobs: stale, total: stale.length, source: 'stale-cache', cacheVersion },
-          { headers: { 'Cache-Control': 'no-store' } }
+          { jobs: stale, total: stale.length, source: 'stale-cache' },
+          { headers: { 'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=120' } }
         );
       }
       return NextResponse.json({ error: 'Failed to fetch jobs' }, { status: 500 });
     }
 
     const jobs = data || [];
-    const serialized = JSON.stringify(jobs);
 
-    // Write primary + stale in parallel; don't await — return to client immediately
+    // ── 3. Write primary + stale cache in parallel ────────────────────────
     Promise.all([
-      redis.setex(CACHE_KEY, CACHE_TTL, serialized),
-      redis.setex(STALE_KEY, STALE_TTL, serialized),
+      redis.set(CACHE_KEY, jobs),          // no TTL — only expires on bust
+      redis.set(STALE_KEY, jobs, { ex: STALE_TTL }),
     ])
-      .then(() => console.log(`[jobs-api] Cached ${jobs.length} jobs (primary: ${CACHE_TTL}s, stale: ${STALE_TTL}s)`))
+      .then(() => console.log(`[jobs-api] Cached ${jobs.length} jobs (no expiry — bust only)`))
       .catch(err => console.error('[jobs-api] Redis write error:', err));
 
     return NextResponse.json(
-      { jobs, total: jobs.length, source: 'supabase', cacheVersion },
-      { headers: { 'Cache-Control': 'no-store' } }
+      { jobs, total: jobs.length, source: 'supabase' },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=120',
+          'Vary': 'Accept-Encoding',
+        },
+      }
     );
-
   } catch (error) {
     console.error('[jobs-api] Unexpected error:', error);
     return NextResponse.json({ error: 'Failed to fetch jobs' }, { status: 500 });
