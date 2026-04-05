@@ -742,9 +742,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
     localStorage.setItem('user_changed_country', 'true');
     localStorage.setItem('has_visited_jobs', 'true');
     setShowCountryPopup(false);
-    const params = new URLSearchParams(searchParams.toString());
-    isGlobal ? params.delete('country') : params.set('country', country);
-    router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname);
+    // Filter applied in-memory — no page reload, no URL push
   };
 
   const clearAllFilters = () => {
@@ -963,7 +961,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
 
             {/* Country select + Upload CV Button — same line on mobile and desktop */}
             <div className="flex flex-row items-center gap-2 w-full min-w-0">
-              <div style={{ flex: "0 1 160px", minWidth: 0 }}>
+              <div style={{ flex: "0 1 160px", minWidth: 0 }} className="lg:flex-1">
                 <select value={filters.country || detectedCountry || 'Global'}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -1058,7 +1056,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
               {!user && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
+                  className="px-3 py-2.5 lg:px-6 rounded-lg font-medium text-sm whitespace-nowrap transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
                   style={{ backgroundColor: theme.colors.primary.DEFAULT, color: '#ffffff', height: '42px' }}
                 >
                   Upload CV: Get Matched
