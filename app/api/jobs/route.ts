@@ -3,9 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import { Redis } from '@upstash/redis';
 
 const FIELDS = 'id, slug, title, company, location, country, salary_range, employment_type, posted_date, created_at, sector, role_category, job_type, role, related_roles, ai_enhanced_roles, skills_required, ai_enhanced_skills, experience_level';
-const CACHE_TTL     = 1800;   // 30 min — primary Redis cache
+const CACHE_TTL     = 3600;   // 1 hour — primary Redis cache
 const STALE_TTL     = 86400;  // 24 h  — stale fallback
-const COOLDOWN_SECS = 1800;   // 30 min — minimum gap between cache busts
+const COOLDOWN_SECS = 3600;   // 1 hour — minimum gap between cache busts
 const CACHE_KEY     = 'jobs:all';
 const STALE_KEY     = 'jobs:all:stale';
 const VERSION_KEY   = 'jobs:cache:version';   // bumped on bust — tells clients to drop sessionStorage

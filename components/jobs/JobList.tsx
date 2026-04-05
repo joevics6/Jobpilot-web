@@ -962,9 +962,8 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
             </div>
 
             {/* Country select + Upload CV Button — same line on mobile and desktop */}
-            <div className="flex flex-row items-center gap-3">
-              <div className="flex-1 relative flex items-center gap-2">
-                <Globe size={16} className="shrink-0" style={{ color: theme.colors.text.secondary }} />
+            <div className="flex flex-row items-center gap-2 w-full min-w-0">
+              <div style={{ flex: "0 1 160px", minWidth: 0 }}>
                 <select value={filters.country || detectedCountry || 'Global'}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -982,7 +981,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
                     v && v !== 'Global' ? params.set('country', v) : params.delete('country');
                     router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname);
                   }}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer font-medium text-sm"
+                  className="w-full px-2 py-2.5 rounded-lg border cursor-pointer font-medium text-sm"
                   style={{ backgroundColor: filters.country ? theme.colors.primary.DEFAULT + '10' : theme.colors.background.DEFAULT, borderColor: filters.country ? theme.colors.primary.DEFAULT : theme.colors.border.DEFAULT, color: theme.colors.text.primary }}>
                   <option value="Global">Global</option>
                   <option value="Nigeria">Nigeria</option>
@@ -1059,10 +1058,9 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
               {!user && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-5 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
+                  className="px-3 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
                   style={{ backgroundColor: theme.colors.primary.DEFAULT, color: '#ffffff', height: '42px' }}
                 >
-                  <FileText size={16} />
                   Upload CV: Get Matched
                 </button>
               )}
@@ -1077,7 +1075,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
             />
 
             {/* Ad: Under location dropdown — always visible */}
-            <div className="w-full overflow-hidden" style={{ margin: 0, padding: '3px 0' }}>
+            <div className="w-full overflow-hidden" style={{ margin: 0, padding: '10px 0 3px 0' }}>
               <AdUnit
                 slot={AD_SLOTS.DISPLAY_TOP}
                 format="auto"
@@ -1128,7 +1126,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
             }} isOpen={filtersOpen} onToggle={() => setFiltersOpen(!filtersOpen)} />
 
             {/* Job list */}
-            <div className="px-6 py-4">
+            <div className="py-2">
               {activeTab === 'latest' && (
                 <>
                   {sortedJobs.length === 0 && !latestJobsLoading ? (

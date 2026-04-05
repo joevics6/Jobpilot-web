@@ -1,7 +1,7 @@
 import JobList from '@/components/jobs/JobList';
 import { Metadata } from 'next';
 
-export const revalidate = 1800; // matches Redis CACHE_TTL — revalidates every 30 min
+export const dynamic = 'force-dynamic'; // always SSR — Redis is the cache layer, not Next.js ISR
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 async function getJobs(): Promise<any[]> {
   try {
     const res = await fetch(`${siteUrl}/api/jobs`, {
-      next: { revalidate: 1800 },
+      cache: 'no-store',
     });
     if (!res.ok) return [];
     const { jobs } = await res.json();
