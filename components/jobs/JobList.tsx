@@ -10,7 +10,7 @@ import { JobUI } from '@/components/jobs/JobCard';
 import MatchBreakdownModal from '@/components/jobs/MatchBreakdownModal';
 import { MatchBreakdownModalData } from '@/components/jobs/MatchBreakdownModal';
 import JobFilters from '@/components/jobs/JobFilters';
-import { Search, X, SlidersHorizontal, ArrowUpDown, RefreshCw, Globe, FileText, ArrowRight, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ArrowUpDown, RefreshCw, Globe, FileText, ArrowRight, CheckCircle, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AuthModal from '@/components/AuthModal';
 import { scoreJob, JobRow, UserOnboardingData } from '@/lib/matching/matchEngine';
@@ -127,7 +127,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [detectedCountry, setDetectedCountry] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCountryPopup, setShowCountryPopup] = useState(false);
+  const [showCountryHint, setShowCountryHint] = useState(false);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -336,7 +336,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
     if (initialTown) setFilters(prev => ({ ...prev, town: initialTown }));
   }, [initialTown]);
 
-  // ── Country detection ───────────────────────────────────────────────────────
+  // ── Country detection + hint ────────────────────────────────────────────────
   useEffect(() => {
     if (initialCountry) return;
     const detectCountry = async () => {
@@ -361,7 +361,10 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
           setDetectedCountry('Nigeria');
           setFilters(prev => ({ ...prev, country: 'Nigeria' }));
         }
-        setShowCountryPopup(true);
+        // Show gentle hint instead of popup
+        setShowCountryHint(true);
+        // Auto hide after 6 seconds
+        setTimeout(() => setShowCountryHint(false), 6000);
       } else {
         const savedCountry = localStorage.getItem('user_country');
         if (savedCountry && savedCountry !== 'Global') {
@@ -372,6 +375,15 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
     };
     detectCountry();
   }, []);
+
+  // Hide country hint when user interacts with dropdown or clicks anywhere
+  useEffect(() => {
+    const hideHint = () => setShowCountryHint(false);
+    if (showCountryHint) {
+      document.addEventListener('click', hideHint);
+      return () => document.removeEventListener('click', hideHint);
+    }
+  }, [showCountryHint]);
 
   // ── Desktop detection ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -731,23 +743,6 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
     setMatchModalOpen(true);
   };
 
-  const handleCountryPopupSave = (country: string) => {
-    const isGlobal = !country || country === 'Global';
-    if (isGlobal) {
-      setFilters(prev => ({ ...prev, country: '', location: [] }));
-      setDetectedCountry('');
-      localStorage.setItem('user_country', 'Global');
-    } else {
-      setFilters(prev => ({ ...prev, country }));
-      setDetectedCountry(country);
-      localStorage.setItem('user_country', country);
-    }
-    localStorage.setItem('user_changed_country', 'true');
-    localStorage.setItem('has_visited_jobs', 'true');
-    setShowCountryPopup(false);
-    // Filter applied in-memory — no page reload, no URL push
-  };
-
   const clearAllFilters = () => {
     setFilters({ search: '', location: [], sector: [], employmentType: [], salaryRange: undefined, remote: false, country: '', roleCategory: '', jobType: '', state: '', town: '' });
     setSearchQuery('');
@@ -962,8 +957,8 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
               )}
             </div>
 
-            {/* Country select + Upload CV Button — same line on mobile and desktop */}
-            <div className="flex flex-row items-center gap-2 w-full min-w-0">
+            {/* Country select + Upload CV Button */}
+            <div className="flex flex-row items-center gap-2 w-full min-w-0 relative">
               <div style={{ flex: "0 1 160px", minWidth: 0 }} className="lg:flex-1">
                 <select value={filters.country || detectedCountry || 'Global'}
                   onChange={(e) => {
@@ -981,88 +976,105 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
                     const params = new URLSearchParams(searchParams.toString());
                     v && v !== 'Global' ? params.set('country', v) : params.delete('country');
                     router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname);
+                    setShowCountryHint(false); // hide hint on interaction
                   }}
                   className="w-full px-2 py-2.5 rounded-lg border cursor-pointer font-medium text-sm"
                   style={{ backgroundColor: filters.country ? theme.colors.primary.DEFAULT + '10' : theme.colors.background.DEFAULT, borderColor: filters.country ? theme.colors.primary.DEFAULT : theme.colors.border.DEFAULT, color: theme.colors.text.primary }}>
                   <option value="Global">Global</option>
-                  <option value="Nigeria">Nigeria</option>
-                  <option value="United States">United States</option>
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Canada">Canada</option>
-                  <option value="Australia">Australia</option>
-                  <option value="Germany">Germany</option>
-                  <option value="France">France</option>
-                  <option value="India">India</option>
-                  <option value="Kenya">Kenya</option>
-                  <option value="South Africa">South Africa</option>
-                  <option value="Ghana">Ghana</option>
-                  <option value="United Arab Emirates">United Arab Emirates</option>
-                  <option value="Saudi Arabia">Saudi Arabia</option>
-                  <option value="Singapore">Singapore</option>
-                  <option value="Netherlands">Netherlands</option>
-                  <option value="Spain">Spain</option>
-                  <option value="Italy">Italy</option>
-                  <option value="Brazil">Brazil</option>
-                  <option value="Mexico">Mexico</option>
-                  <option value="Japan">Japan</option>
-                  <option value="China">China</option>
-                  <option value="Ireland">Ireland</option>
-                  <option value="Switzerland">Switzerland</option>
-                  <option value="Sweden">Sweden</option>
-                  <option value="Norway">Norway</option>
-                  <option value="Denmark">Denmark</option>
-                  <option value="Finland">Finland</option>
-                  <option value="Poland">Poland</option>
-                  <option value="Portugal">Portugal</option>
-                  <option value="Belgium">Belgium</option>
-                  <option value="Austria">Austria</option>
-                  <option value="New Zealand">New Zealand</option>
-                  <option value="Israel">Israel</option>
-                  <option value="Malaysia">Malaysia</option>
-                  <option value="Philippines">Philippines</option>
-                  <option value="Indonesia">Indonesia</option>
-                  <option value="Thailand">Thailand</option>
-                  <option value="Vietnam">Vietnam</option>
-                  <option value="South Korea">South Korea</option>
-                  <option value="Egypt">Egypt</option>
-                  <option value="Argentina">Argentina</option>
-                  <option value="Bangladesh">Bangladesh</option>
-                  <option value="Colombia">Colombia</option>
-                  <option value="Czech Republic">Czech Republic</option>
-                  <option value="Chile">Chile</option>
-                  <option value="Ecuador">Ecuador</option>
-                  <option value="Ethiopia">Ethiopia</option>
-                  <option value="Greece">Greece</option>
-                  <option value="Hong Kong">Hong Kong</option>
-                  <option value="Hungary">Hungary</option>
-                  <option value="Iraq">Iraq</option>
-                  <option value="Jordan">Jordan</option>
-                  <option value="Kuwait">Kuwait</option>
-                  <option value="Lebanon">Lebanon</option>
-                  <option value="Morocco">Morocco</option>
-                  <option value="Oman">Oman</option>
-                  <option value="Pakistan">Pakistan</option>
-                  <option value="Peru">Peru</option>
-                  <option value="Qatar">Qatar</option>
-                  <option value="Romania">Romania</option>
-                  <option value="Russia">Russia</option>
-                  <option value="Sri Lanka">Sri Lanka</option>
-                  <option value="Taiwan">Taiwan</option>
-                  <option value="Tanzania">Tanzania</option>
-                  <option value="Turkey">Turkey</option>
-                  <option value="Ukraine">Ukraine</option>
-                  <option value="Venezuela">Venezuela</option>
-                  <option value="Zimbabwe">Zimbabwe</option>
+                  <option value="Nigeria">🇳🇬 Nigeria</option>
+                  <option value="United States">🇺🇸 United States</option>
+                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                  <option value="Canada">🇨🇦 Canada</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="Germany">🇩🇪 Germany</option>
+                  <option value="France">🇫🇷 France</option>
+                  <option value="India">🇮🇳 India</option>
+                  <option value="Kenya">🇰🇪 Kenya</option>
+                  <option value="South Africa">🇿🇦 South Africa</option>
+                  <option value="Ghana">🇬🇭 Ghana</option>
+                  <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                  <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                  <option value="Singapore">🇸🇬 Singapore</option>
+                  <option value="Netherlands">🇳🇱 Netherlands</option>
+                  <option value="Spain">🇪🇸 Spain</option>
+                  <option value="Italy">🇮🇹 Italy</option>
+                  <option value="Brazil">🇧🇷 Brazil</option>
+                  <option value="Mexico">🇲🇽 Mexico</option>
+                  <option value="Japan">🇯🇵 Japan</option>
+                  <option value="China">🇨🇳 China</option>
+                  <option value="Ireland">🇮🇪 Ireland</option>
+                  <option value="Switzerland">🇨🇭 Switzerland</option>
+                  <option value="Sweden">🇸🇪 Sweden</option>
+                  <option value="Norway">🇳🇴 Norway</option>
+                  <option value="Denmark">🇩🇰 Denmark</option>
+                  <option value="Finland">🇫🇮 Finland</option>
+                  <option value="Poland">🇵🇱 Poland</option>
+                  <option value="Portugal">🇵🇹 Portugal</option>
+                  <option value="Belgium">🇧🇪 Belgium</option>
+                  <option value="Austria">🇦🇹 Austria</option>
+                  <option value="New Zealand">🇳🇿 New Zealand</option>
+                  <option value="Israel">🇮🇱 Israel</option>
+                  <option value="Malaysia">🇲🇾 Malaysia</option>
+                  <option value="Philippines">🇵🇭 Philippines</option>
+                  <option value="Indonesia">🇮🇩 Indonesia</option>
+                  <option value="Thailand">🇹🇭 Thailand</option>
+                  <option value="Vietnam">🇻🇳 Vietnam</option>
+                  <option value="South Korea">🇰🇷 South Korea</option>
+                  <option value="Egypt">🇪🇬 Egypt</option>
+                  <option value="Argentina">🇦🇷 Argentina</option>
+                  <option value="Bangladesh">🇧🇩 Bangladesh</option>
+                  <option value="Colombia">🇨🇴 Colombia</option>
+                  <option value="Czech Republic">🇨🇿 Czech Republic</option>
+                  <option value="Chile">🇨🇱 Chile</option>
+                  <option value="Ecuador">🇪🇨 Ecuador</option>
+                  <option value="Ethiopia">🇪🇹 Ethiopia</option>
+                  <option value="Greece">🇬🇷 Greece</option>
+                  <option value="Hong Kong">🇭🇰 Hong Kong</option>
+                  <option value="Hungary">🇭🇺 Hungary</option>
+                  <option value="Iraq">🇮🇶 Iraq</option>
+                  <option value="Jordan">🇯🇴 Jordan</option>
+                  <option value="Kuwait">🇰🇼 Kuwait</option>
+                  <option value="Lebanon">🇱🇧 Lebanon</option>
+                  <option value="Morocco">🇲🇦 Morocco</option>
+                  <option value="Oman">🇴🇲 Oman</option>
+                  <option value="Pakistan">🇵🇰 Pakistan</option>
+                  <option value="Peru">🇵🇪 Peru</option>
+                  <option value="Qatar">🇶🇦 Qatar</option>
+                  <option value="Romania">🇷🇴 Romania</option>
+                  <option value="Russia">🇷🇺 Russia</option>
+                  <option value="Sri Lanka">🇱🇰 Sri Lanka</option>
+                  <option value="Taiwan">🇹🇼 Taiwan</option>
+                  <option value="Tanzania">🇹🇿 Tanzania</option>
+                  <option value="Turkey">🇹🇷 Turkey</option>
+                  <option value="Ukraine">🇺🇦 Ukraine</option>
+                  <option value="Venezuela">🇻🇪 Venezuela</option>
+                  <option value="Zimbabwe">🇿🇼 Zimbabwe</option>
                 </select>
               </div>
+
+              {/* Country hint - appears only for first visit */}
+              {showCountryHint && (
+                <div className="absolute -top-8 left-0 text-xs text-blue-600 flex items-center gap-1 pointer-events-none animate-pulse">
+                  <span>Select country</span>
+                  <ArrowRight size={14} className="animate-bounce" />
+                </div>
+              )}
 
               {!user && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-2.5 lg:px-6 rounded-lg font-medium text-sm whitespace-nowrap transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
+                  disabled={cvStatus === 'uploading' || cvStatus === 'parsing'}
+                  className="px-3 py-2.5 lg:px-6 rounded-lg font-medium text-sm whitespace-nowrap transition-all hover:opacity-90 active:scale-95 flex-shrink-0 flex items-center gap-2 disabled:opacity-70"
                   style={{ backgroundColor: theme.colors.primary.DEFAULT, color: '#ffffff', height: '42px' }}
                 >
-                  Upload CV: Get Matched
+                  {cvStatus === 'uploading' || cvStatus === 'parsing' ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Upload CV: Get Matched'
+                  )}
                 </button>
               )}
             </div>
@@ -1260,101 +1272,6 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
                   )}
                 </>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* First-visit country selection popup */}
-        {showCountryPopup && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ backgroundColor: theme.colors.background.DEFAULT }}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                  <Globe size={20} className="text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>Where are you based?</h2>
-                  <p className="text-sm" style={{ color: theme.colors.text.secondary }}>We'll show you the most relevant jobs</p>
-                </div>
-              </div>
-
-              <select
-                defaultValue={detectedCountry || 'Nigeria'}
-                id="country-popup-select"
-                className="w-full mt-4 px-4 py-3 rounded-xl border-2 font-medium text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                style={{ backgroundColor: theme.colors.background.muted, borderColor: theme.colors.border.DEFAULT, color: theme.colors.text.primary }}
-              >
-                <option value="Global">🌍 Global (show all countries)</option>
-                <option value="Nigeria">🇳🇬 Nigeria</option>
-                <option value="United States">🇺🇸 United States</option>
-                <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                <option value="Canada">🇨🇦 Canada</option>
-                <option value="Australia">🇦🇺 Australia</option>
-                <option value="Germany">🇩🇪 Germany</option>
-                <option value="France">🇫🇷 France</option>
-                <option value="India">🇮🇳 India</option>
-                <option value="Kenya">🇰🇪 Kenya</option>
-                <option value="South Africa">🇿🇦 South Africa</option>
-                <option value="Ghana">🇬🇭 Ghana</option>
-                <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
-                <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
-                <option value="Singapore">🇸🇬 Singapore</option>
-                <option value="Netherlands">🇳🇱 Netherlands</option>
-                <option value="Spain">🇪🇸 Spain</option>
-                <option value="Italy">🇮🇹 Italy</option>
-                <option value="Brazil">🇧🇷 Brazil</option>
-                <option value="Mexico">🇲🇽 Mexico</option>
-                <option value="Japan">🇯🇵 Japan</option>
-                <option value="China">🇨🇳 China</option>
-                <option value="Ireland">🇮🇪 Ireland</option>
-                <option value="Switzerland">🇨🇭 Switzerland</option>
-                <option value="Sweden">🇸🇪 Sweden</option>
-                <option value="Norway">🇳🇴 Norway</option>
-                <option value="Denmark">🇩🇰 Denmark</option>
-                <option value="Finland">🇫🇮 Finland</option>
-                <option value="Poland">🇵🇱 Poland</option>
-                <option value="Portugal">🇵🇹 Portugal</option>
-                <option value="Belgium">🇧🇪 Belgium</option>
-                <option value="Austria">🇦🇹 Austria</option>
-                <option value="New Zealand">🇳🇿 New Zealand</option>
-                <option value="Israel">🇮🇱 Israel</option>
-                <option value="Malaysia">🇲🇾 Malaysia</option>
-                <option value="Philippines">🇵🇭 Philippines</option>
-                <option value="Indonesia">🇮🇩 Indonesia</option>
-                <option value="Thailand">🇹🇭 Thailand</option>
-                <option value="Vietnam">🇻🇳 Vietnam</option>
-                <option value="South Korea">🇰🇷 South Korea</option>
-                <option value="Egypt">🇪🇬 Egypt</option>
-                <option value="Pakistan">🇵🇰 Pakistan</option>
-                <option value="Bangladesh">🇧🇩 Bangladesh</option>
-                <option value="Morocco">🇲🇦 Morocco</option>
-                <option value="Tanzania">🇹🇿 Tanzania</option>
-                <option value="Ethiopia">🇪🇹 Ethiopia</option>
-                <option value="Qatar">🇶🇦 Qatar</option>
-                <option value="Kuwait">🇰🇼 Kuwait</option>
-                <option value="Oman">🇴🇲 Oman</option>
-                <option value="Jordan">🇯🇴 Jordan</option>
-                <option value="Lebanon">🇱🇧 Lebanon</option>
-              </select>
-
-              <button
-                onClick={() => {
-                  const sel = (document.getElementById('country-popup-select') as HTMLSelectElement)?.value;
-                  handleCountryPopupSave(sel || 'Global');
-                }}
-                className="w-full mt-4 py-3 rounded-xl font-semibold text-white text-sm transition-all hover:opacity-90 active:scale-95"
-                style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-              >
-                Show Jobs
-              </button>
-
-              <button
-                onClick={() => handleCountryPopupSave('Global')}
-                className="w-full mt-2 py-2 text-sm font-medium transition-colors"
-                style={{ color: theme.colors.text.muted }}
-              >
-                Skip — show all countries
-              </button>
             </div>
           </div>
         )}

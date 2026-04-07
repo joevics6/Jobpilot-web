@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -422,14 +422,15 @@ export default function OnboardingPage() {
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap'); .ob-page, .ob-page * { font-family: 'DM Sans', sans-serif; } .ob-page h1,.ob-page h2,.ob-page h3,.ob-page .ob-serif { font-family: 'DM Serif Display', serif; }`}</style>
     <div className="ob-page min-h-screen p-4 md:p-8" style={{ backgroundColor: theme.colors.background.muted }}>
-      <div className="max-w-6xl mx-auto space-y-4 pb-16">
+      <div className="max-w-6xl mx-auto space-y-6 pb-16">
 
         {/* ── SECTION 1: CV Upload ── */}
         <Card className="border bg-white" style={{ borderColor: theme.colors.border.DEFAULT, boxShadow: theme.shadows.md }}>
-          <CardHeader className="text-center pb-2">
-            <CardDescription className="text-sm md:text-base">
-              Upload your CV, paste text, or enter details manually. Our AI will analyze your experience and skills.
-            </CardDescription>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-lg" style={{ color: theme.colors.text.primary }}>
+              <Upload className="h-5 w-5" style={{ color: theme.colors.primary.DEFAULT }} />
+              CV Upload
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <CVUploadStep
@@ -469,11 +470,11 @@ export default function OnboardingPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full w-10 h-10 flex items-center justify-center" style={{ backgroundColor: theme.colors.accent.blue }}>
+                  <div className="p-2 rounded-full w-10 h-10 flex items-center justify-center" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
                     <Briefcase className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-base">Target Roles</CardTitle>
+                    <CardTitle className="text-base" style={{ color: theme.colors.text.primary }}>Target Roles</CardTitle>
                     {selectedRoles.length > 0 && (
                       <p className="text-xs text-green-600 font-medium mt-0.5">{selectedRoles.length} selected</p>
                     )}
@@ -500,7 +501,7 @@ export default function OnboardingPage() {
                         variant={selectedRoles.includes(role) ? 'default' : 'outline'}
                         className="cursor-pointer px-3 py-2 transition-all"
                         style={selectedRoles.includes(role)
-                          ? { backgroundColor: theme.colors.accent.blue, borderColor: theme.colors.accent.blue, color: '#fff' }
+                          ? { backgroundColor: theme.colors.primary.DEFAULT, borderColor: theme.colors.primary.DEFAULT, color: '#fff' }
                           : { backgroundColor: theme.colors.background.muted, borderColor: theme.colors.border.DEFAULT }}
                         onClick={() => handleRoleToggle(role)}
                       >
@@ -532,7 +533,7 @@ export default function OnboardingPage() {
                         variant={selectedRoles.includes(role) ? 'default' : 'outline'}
                         className="cursor-pointer px-3 py-2 transition-all"
                         style={selectedRoles.includes(role)
-                          ? { backgroundColor: theme.colors.accent.blue, borderColor: theme.colors.accent.blue, color: '#fff' }
+                          ? { backgroundColor: theme.colors.primary.DEFAULT, borderColor: theme.colors.primary.DEFAULT, color: '#fff' }
                           : { backgroundColor: theme.colors.success + '15', borderColor: theme.colors.success + '40' }}
                         onClick={() => handleRoleToggle(role)}
                       >
@@ -561,7 +562,7 @@ export default function OnboardingPage() {
                     onClick={addCustomRole}
                     disabled={!newRole.trim() || selectedRoles.includes(newRole.trim())}
                     className="text-white"
-                    style={{ backgroundColor: theme.colors.accent.blue }}
+                    style={{ backgroundColor: theme.colors.primary.DEFAULT }}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -597,11 +598,11 @@ export default function OnboardingPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full w-10 h-10 flex items-center justify-center" style={{ backgroundColor: theme.colors.accent.blue }}>
+                  <div className="p-2 rounded-full w-10 h-10 flex items-center justify-center" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
                     <MapPin className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-base">Job Preferences</CardTitle>
+                    <CardTitle className="text-base" style={{ color: theme.colors.text.primary }}>Job Preferences</CardTitle>
                     {preferences.locations.length > 0 && (
                       <p className="text-xs text-green-600 font-medium mt-0.5">{preferences.locations.join(', ')}</p>
                     )}
@@ -617,7 +618,7 @@ export default function OnboardingPage() {
               {/* Preferred Locations */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <MapPin className="h-4 w-4" style={{ color: theme.colors.accent.blue }} />
+                  <MapPin className="h-4 w-4" style={{ color: theme.colors.primary.DEFAULT }} />
                   <Label className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>Preferred Locations</Label>
                 </div>
                 <div className="flex gap-2 mb-3">
@@ -628,7 +629,7 @@ export default function OnboardingPage() {
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLocation(); } }}
                     className="flex-1"
                   />
-                  <Button onClick={addLocation} className="text-white" style={{ backgroundColor: theme.colors.accent.blue }}>Add</Button>
+                  <Button onClick={addLocation} className="text-white" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>Add</Button>
                 </div>
                 {preferences.locations.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -645,7 +646,7 @@ export default function OnboardingPage() {
               {/* Work Preference */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <MapPin className="h-4 w-4" style={{ color: theme.colors.accent.blue }} />
+                  <MapPin className="h-4 w-4" style={{ color: theme.colors.primary.DEFAULT }} />
                   <Label className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>Work Preference</Label>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -654,7 +655,7 @@ export default function OnboardingPage() {
                       key={preference}
                       onClick={() => setPreferences({ ...preferences, remotePreference: preferences.remotePreference === preference ? '' : preference })}
                       className={`px-4 py-2 rounded-md border transition-all ${preferences.remotePreference === preference ? 'text-white' : 'bg-white border-gray-300'}`}
-                      style={preferences.remotePreference === preference ? { backgroundColor: theme.colors.accent.blue, borderColor: theme.colors.accent.blue } : { color: theme.colors.text.primary }}
+                      style={preferences.remotePreference === preference ? { backgroundColor: theme.colors.primary.DEFAULT, borderColor: theme.colors.primary.DEFAULT } : { color: theme.colors.text.primary }}
                     >
                       {preference}
                     </button>
@@ -665,7 +666,7 @@ export default function OnboardingPage() {
               {/* Salary Range */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Banknote className="h-4 w-4" style={{ color: theme.colors.accent.blue }} />
+                  <Banknote className="h-4 w-4" style={{ color: theme.colors.primary.DEFAULT }} />
                   <Label className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>Minimum Salary</Label>
                 </div>
                 <Input
@@ -680,7 +681,7 @@ export default function OnboardingPage() {
               {/* Experience Level */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Award className="h-4 w-4" style={{ color: theme.colors.accent.blue }} />
+                  <Award className="h-4 w-4" style={{ color: theme.colors.primary.DEFAULT }} />
                   <Label className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>Experience Level</Label>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -689,7 +690,7 @@ export default function OnboardingPage() {
                       key={level}
                       onClick={() => setPreferences({ ...preferences, experienceLevel: preferences.experienceLevel === level ? '' : level })}
                       className={`px-4 py-2 rounded-md border transition-all ${preferences.experienceLevel === level ? 'text-white' : 'bg-white border-gray-300'}`}
-                      style={preferences.experienceLevel === level ? { backgroundColor: theme.colors.accent.blue, borderColor: theme.colors.accent.blue } : { color: theme.colors.text.primary }}
+                      style={preferences.experienceLevel === level ? { backgroundColor: theme.colors.primary.DEFAULT, borderColor: theme.colors.primary.DEFAULT } : { color: theme.colors.text.primary }}
                     >
                       {level}
                     </button>
@@ -700,7 +701,7 @@ export default function OnboardingPage() {
               {/* Job Type */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4" style={{ color: theme.colors.accent.blue }} />
+                  <Clock className="h-4 w-4" style={{ color: theme.colors.primary.DEFAULT }} />
                   <Label className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>Job Type</Label>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -709,7 +710,7 @@ export default function OnboardingPage() {
                       key={type}
                       onClick={() => setPreferences({ ...preferences, jobType: preferences.jobType === type ? '' : type })}
                       className={`px-4 py-2 rounded-md border transition-all ${preferences.jobType === type ? 'text-white' : 'bg-white border-gray-300'}`}
-                      style={preferences.jobType === type ? { backgroundColor: theme.colors.accent.blue, borderColor: theme.colors.accent.blue } : { color: theme.colors.text.primary }}
+                      style={preferences.jobType === type ? { backgroundColor: theme.colors.primary.DEFAULT, borderColor: theme.colors.primary.DEFAULT } : { color: theme.colors.text.primary }}
                     >
                       {type}
                     </button>
@@ -720,7 +721,7 @@ export default function OnboardingPage() {
               {/* Industry Sector */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <User className="h-4 w-4" style={{ color: theme.colors.accent.blue }} />
+                  <User className="h-4 w-4" style={{ color: theme.colors.primary.DEFAULT }} />
                   <Label className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>Industry Sector</Label>
                 </div>
                 <Select value={preferences.sector} onValueChange={(value) => setPreferences({ ...preferences, sector: value })}>
@@ -1132,10 +1133,10 @@ function CVUploadStep({ onExtracted, isProcessing, setIsProcessing, onProfileExt
             {uploadedFile && (
               <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background.muted, border: `1px solid ${theme.colors.border.DEFAULT}` }}>
                 <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5" style={{ color: theme.colors.accent.blue }} />
+                  <FileText className="h-5 w-5" style={{ color: theme.colors.primary.DEFAULT }} />
                   <div className="flex-1">
                     <p className="font-medium" style={{ color: theme.colors.text.primary }}>{uploadedFile.name}</p>
-                    <p className="text-sm" style={{ color: theme.colors.accent.blue }}>{isProcessing ? 'Processing...' : 'Ready for analysis'}</p>
+                    <p className="text-sm" style={{ color: theme.colors.primary.DEFAULT }}>{isProcessing ? 'Processing...' : 'Ready for analysis'}</p>
                   </div>
                   {!isProcessing && (
                     <Button variant="outline" size="sm" onClick={() => { setUploadedFile(null); setExtractedProfile(null); setCvText(''); setError(''); }}>
@@ -1169,7 +1170,7 @@ function CVUploadStep({ onExtracted, isProcessing, setIsProcessing, onProfileExt
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (fileInputRef.current && !isProcessing) fileInputRef.current.click(); }}
                 disabled={isProcessing}
                 className="text-white disabled:opacity-50"
-                style={{ backgroundColor: theme.colors.accent.blue }}
+                style={{ backgroundColor: theme.colors.primary.DEFAULT }}
               >
                 <Upload className="mr-2 h-4 w-4" />Choose File
               </Button>
@@ -1186,7 +1187,7 @@ function CVUploadStep({ onExtracted, isProcessing, setIsProcessing, onProfileExt
                 className="w-full"
               />
               {cvText.trim() && !extractedProfile && !isProcessing && (
-                <Button onClick={() => parseCVText(cvText)} disabled={isParsingCV} className="mt-2 bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => parseCVText(cvText)} disabled={isParsingCV} className="mt-2" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
                   {isParsingCV ? (
                     <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Processing...</>
                   ) : (
@@ -1235,7 +1236,7 @@ function CVUploadStep({ onExtracted, isProcessing, setIsProcessing, onProfileExt
               <Textarea id="skills" value={manualData.skills} onChange={(e) => setManualData(prev => ({ ...prev, skills: e.target.value }))} placeholder="JavaScript, React, Node.js..." rows={3} />
             </div>
             <div className="flex justify-center">
-              <Button onClick={analyzeManualData} disabled={isProcessing} className="bg-blue-600 hover:bg-blue-700 text-white px-8">
+              <Button onClick={analyzeManualData} disabled={isProcessing} className="bg-blue-600 hover:bg-blue-700 text-white px-8" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
                 {isProcessing ? (
                   <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Analyzing...</>
                 ) : (
