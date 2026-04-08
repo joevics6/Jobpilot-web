@@ -150,11 +150,12 @@ async function fetchSimilarCompanies(company: Company): Promise<RelatedCompany[]
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ slug: string }>;
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const company = await getCompany(params.slug);
   if (!company) return { title: 'Company Not Found | JobMeter' };
 
@@ -213,11 +214,12 @@ export async function generateStaticParams() {
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default async function CompanyProfilePage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default async function CompanyProfilePage(
+  props: {
+    params: Promise<{ slug: string }>;
+  }
+) {
+  const params = await props.params;
   const company = await getCompany(params.slug);
   if (!company) notFound();
 
@@ -249,7 +251,6 @@ export default async function CompanyProfilePage({
       {company.faqs && Array.isArray(company.faqs) && company.faqs.length > 0 && (
         <FAQSchema faqs={company.faqs} />
       )}
-
       {/* ════════════════════════════════════════════════════════════════════
           Ad ⑤ — Anchor · slot 9751041788
           Fixed bottom bar, visible on BOTH mobile and desktop.
@@ -266,7 +267,6 @@ export default async function CompanyProfilePage({
           style={{ display: 'block', width: '100%', height: '50px', maxHeight: '50px', overflow: 'hidden' }}
         />
       </div>
-
       <div className="min-h-screen bg-gray-50">
 
         {/* ── Breadcrumb ── */}

@@ -5,6 +5,7 @@ import { COMPANIES, companyToSlug, slugToCompany } from '@/lib/quizCompanies';
 import AdUnit from '@/components/ads/AdUnit';   // ← Added this missing import
 
 export const revalidate = false;
+export const dynamic = 'force-dynamic';
 
 export async function generateStaticParams() {
   return COMPANIES.map((company) => ({

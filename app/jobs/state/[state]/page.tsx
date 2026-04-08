@@ -16,7 +16,8 @@ const STATE_MAP: Record<string, string> = {
   abuja: 'nigeria', fct: 'nigeria',
 };
 
-export default function OldStateRedirect({ params }: { params: { state: string } }) {
+export default async function OldStateRedirect(props: { params: Promise<{ state: string }> }) {
+  const params = await props.params;
   const slug = params.state.toLowerCase();
   const country = STATE_MAP[slug] || 'nigeria';
   redirect(`/jobs/Location/${country}/${slug}`);

@@ -52,7 +52,8 @@ export async function generateStaticParams() {
   }
 }
 
-export async function generateMetadata({ params }: { params: { category: string; slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ category: string; slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const supabase = createClient();
   const { slug, category } = params;
 
@@ -76,7 +77,8 @@ export async function generateMetadata({ params }: { params: { category: string;
   };
 }
 
-export default async function RemoteCategoryJobPage({ params }: { params: { category: string; slug: string } }) {
+export default async function RemoteCategoryJobPage(props: { params: Promise<{ category: string; slug: string }> }) {
+  const params = await props.params;
   const supabase = createClient();
   const { slug } = params;
 

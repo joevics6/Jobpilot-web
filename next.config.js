@@ -1,5 +1,3 @@
-// 📁 next.config.js
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -16,7 +14,6 @@ const nextConfig = {
     '@radix-ui/react-slot',
     'cmdk',
   ],
-  swcMinify: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
@@ -31,9 +28,6 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Cache job detail pages at Vercel edge for 24 hours.
-        // revalidate = false alone doesn't force edge caching in Next.js 13 App Router
-        // because of the RSC Vary headers — this override is required.
         source: '/jobs/:slug',
         headers: [
           {
@@ -43,7 +37,6 @@ const nextConfig = {
         ],
       },
       {
-        // Cache country/location pages at edge for 24 hours
         source: '/jobs/Location/:path*',
         headers: [
           {
@@ -53,7 +46,6 @@ const nextConfig = {
         ],
       },
       {
-        // Cache resource/category pages at edge for 24 hours
         source: '/resources/:slug',
         headers: [
           {
@@ -65,7 +57,6 @@ const nextConfig = {
     ];
   },
 
-  // Fix 404 bot loops seen in Vercel logs
   async redirects() {
     return [
       {

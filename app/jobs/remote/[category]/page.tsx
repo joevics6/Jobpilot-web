@@ -128,7 +128,8 @@ async function fetchRelatedCategories(page: RemoteCategory): Promise<RelatedCate
   }
 }
 
-export async function generateMetadata({ params }: { params: { category: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ category: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const page = await getRemoteCategory(params.category);
   if (!page) return { title: 'Remote Category Not Found | JobMeter' };
 
@@ -161,7 +162,8 @@ export async function generateStaticParams() {
   }
 }
 
-export default async function RemoteCategoryPage({ params }: { params: { category: string } }) {
+export default async function RemoteCategoryPage(props: { params: Promise<{ category: string }> }) {
+  const params = await props.params;
   const page = await getRemoteCategory(params.category);
   if (!page) notFound();
 

@@ -4,6 +4,7 @@ import AdUnit from '@/components/ads/AdUnit';
 import { GraduationCap, Laptop, Award, Home, Globe, Rocket, ClipboardList, GraduationCap as GC, ChevronRight } from 'lucide-react';
 
 export const revalidate = false;
+export const dynamic = 'force-dynamic';
 
 export default function InternshipFinderPage() {
   return (

@@ -167,7 +167,8 @@ async function fetchRelatedCategories(page: CategoryPage): Promise<RelatedCatego
   }
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const page = await getCategoryPage(params.slug);
   if (!page) return { title: 'Category Not Found | JobMeter' };
 
@@ -215,7 +216,8 @@ export async function generateStaticParams() {
   }
 }
 
-export default async function CategoryPage({ params }: { params: { slug: string } }) {
+export default async function CategoryPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const page = await getCategoryPage(params.slug);
   if (!page) notFound();
 

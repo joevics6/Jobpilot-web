@@ -1,6 +1,8 @@
+// 📁 app/api/send-daily-jobs/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendNotification } from '@/lib/firebase-admin';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +80,9 @@ export async function GET(request: NextRequest) {
 
     let successCount = 0;
     let failCount = 0;
+
+    // Lazy import Firebase only when actually sending notifications
+    const { sendNotification } = await import('@/lib/firebase-admin');
 
     for (const { token } of tokens) {
       const result = await sendNotification(token, title, body, data);

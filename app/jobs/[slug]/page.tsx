@@ -49,15 +49,16 @@ function getCountryAbbreviation(job: any): string | null {
 
 // ─── generateMetadata ────────────────────────────────────────────────────────
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const { slug } = params;
-  
+
   if (KNOWN_COUNTRIES.includes(slug)) {
     redirect(`/jobs/${slug}`);
   }
-  
+
   const supabase = createClient();
-  
+
   const { data: job, error } = await supabase
     .from('jobs')
     .select('*')
@@ -104,7 +105,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const jobTitle = job.title || 'Job Opportunity';
   const countryAbbr = getCountryAbbreviation(job);
 
-// ── Title: "Accountant at Dangote in NG" (layout template appends "| JobMeter")
+  // ── Title: "Accountant at Dangote in NG" (layout template appends "| JobMeter")
   // or for confidential: "Accountant in Lagos, NG"
   let titleCore = isConfidential
     ? countryAbbr ? `${jobTitle} in ${countryAbbr}` : jobTitle
@@ -227,11 +228,12 @@ async function fetchRelatedJobs(currentJob: any) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function JobPage({ params }: { params: { slug: string } }) {
+export default async function JobPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const supabase = createClient();
-  
+
   const { slug } = params;
-  
+
   const { data: job, error } = await supabase
     .from('jobs')
     .select('*')

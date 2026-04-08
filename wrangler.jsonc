@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jobmeter-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-04-08",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "JOBS_KV",
+      "id": "6fb10a2792b74676897be6f30aba2f5d"
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://qyuzuooxenyjqnjplrya.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dXp1b294ZW55anFuanBscnlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxNTAwNTEsImV4cCI6MjA3NDcyNjA1MX0.qAYvSqUeDtM6eK49qQtLzrwCYtBraVICAPoSNr4UlmE",
+    "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyDuwib21LFI9hdkAMJ1L1iyddnYv3Llmyc",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "jobmeter-3a05f.firebaseapp.com",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "jobmeter-3a05f",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "jobmeter-3a05f.firebasestorage.app",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "513719973107",
+    "NEXT_PUBLIC_FIREBASE_APP_ID": "1:513719973107:web:b9c85fb27e3f8cc89cf386",
+    "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-315B0S5RGE",
+    "NEXT_PUBLIC_FIREBASE_VAPID_KEY": "BBHqprDllbnM_n2ROIN41-hUJ30uTXbHa1TW9j-GvuR6jtACpY55aHOjJ2Mu2XF6vxkJ8773OAYvVr-O7Vl8DiE",
+    "NEXT_PUBLIC_JOBS_API_URL": "https://jobs-api.joevicspro.workers.dev",
+    "NEXT_PUBLIC_QUIZ_SUPABASE_URL": "https://clhwdpwwzbuyrfxdazkb.supabase.co",
+    "NEXT_PUBLIC_QUIZ_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsaHdkcHd3emJ1eXJmeGRhemtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyOTk1NDYsImV4cCI6MjA4NDg3NTU0Nn0.71xzj2LjmZg8Ow1HARfLBqukj5APLFg8tFpwIgIspGQ"
+  }
+}

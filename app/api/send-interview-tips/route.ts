@@ -1,6 +1,8 @@
+// 📁 app/api/send-interview-tips/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendNotification } from '@/lib/firebase-admin';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,6 +45,9 @@ export async function GET(request: NextRequest) {
     const title = '💼 Boost Your Interview Skills';
     const body = 'Practice common interview questions and ace your next interview!';
     const data = { url: '/interview-practice', tag: 'interview-tip' };
+
+    // Lazy import Firebase only when actually sending notifications
+    const { sendNotification } = await import('@/lib/firebase-admin');
 
     for (const { token } of tokens) {
       const result = await sendNotification(token, title, body, data);

@@ -100,10 +100,15 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
   alternates: {
     canonical: siteUrl,
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

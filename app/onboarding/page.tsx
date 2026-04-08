@@ -461,7 +461,7 @@ export default function OnboardingPage() {
           </CardContent>
         </Card>
 
-        {/* ── SECTION 2: Target Roles ── */}
+        {/* ── SECTION 2: Select Target Roles ── */}
         <Card className="border bg-white" style={{ borderColor: theme.colors.border.DEFAULT, boxShadow: theme.shadows.md }}>
           <button
             className="w-full text-left"
@@ -474,7 +474,7 @@ export default function OnboardingPage() {
                     <Briefcase className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-base" style={{ color: theme.colors.text.primary }}>Target Roles</CardTitle>
+                    <CardTitle className="text-base" style={{ color: theme.colors.text.primary }}>Select Target Roles</CardTitle>
                     {selectedRoles.length > 0 && (
                       <p className="text-xs text-green-600 font-medium mt-0.5">{selectedRoles.length} selected</p>
                     )}
@@ -602,7 +602,7 @@ export default function OnboardingPage() {
                     <MapPin className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-base" style={{ color: theme.colors.text.primary }}>Job Preferences</CardTitle>
+                    <CardTitle className="text-base" style={{ color: theme.colors.text.primary }}>Choose Your Job Preferences</CardTitle>
                     {preferences.locations.length > 0 && (
                       <p className="text-xs text-green-600 font-medium mt-0.5">{preferences.locations.join(', ')}</p>
                     )}

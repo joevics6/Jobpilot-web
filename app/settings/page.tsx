@@ -354,6 +354,32 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* NEW: Apply for Me Section - Added before Notifications */}
+        <div className="mb-6">
+          <h2 className="text-base font-semibold mb-2 px-1 text-gray-700">Apply for Me</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" 
+                   style={{ backgroundColor: '#fef3c7' }}>
+                <span className="text-2xl">📋</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 text-lg mb-1">Let us apply for jobs for you</h3>
+                <p className="text-gray-600 text-sm leading-relaxed mb-5">
+                  Too busy to apply? We handle everything — CV optimization, cover letters, and 10–15 targeted applications every month.
+                </p>
+                <Button 
+                  onClick={() => router.push('/apply-for-me')}
+                  className="w-full sm:w-auto"
+                  style={{ backgroundColor: theme.colors.primary.DEFAULT }}
+                >
+                  Go to Apply for Me
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Notifications */}
         <div className="mb-6">
           <h2 className="text-base font-semibold mb-2 px-1 text-gray-700">Notifications</h2>

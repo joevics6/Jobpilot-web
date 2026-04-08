@@ -1,6 +1,8 @@
+// 📁 app/api/send-cv-tips/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendNotification } from '@/lib/firebase-admin';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,6 +45,9 @@ export async function GET(request: NextRequest) {
     const title = '📄 Improve Your CV';
     const body = 'Update your CV to stand out from other candidates and get noticed!';
     const data = { url: '/cv-builder', tag: 'cv-tip' };
+
+    // Lazy import Firebase only when actually sending notifications
+    const { sendNotification } = await import('@/lib/firebase-admin');
 
     for (const { token } of tokens) {
       const result = await sendNotification(token, title, body, data);
