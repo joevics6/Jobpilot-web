@@ -7,7 +7,7 @@ import { Building2, ArrowRight, CheckCircle, ArrowLeft } from 'lucide-react';
 import AdUnit from '@/components/ads/AdUnit';
 
 interface Props {
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
@@ -83,8 +83,7 @@ function groupByIndustry(companies: Company[]) {
 
 export const revalidate = false;
 
-export default async function CompanyDirectoryPage(props: Props) {
-  const searchParams = await props.searchParams;
+export default async function CompanyDirectoryPage({ searchParams }: Props) {
   const companyName = searchParams?.name;
 
   // Handle ?name= redirect

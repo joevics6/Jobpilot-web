@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, FileText, Trash2, ArrowLeft, ChevronDown, Search, FileCheck, Briefcase, MessageCircle, GraduationCap, Brain, Shield, Calculator, CheckCircle, XCircle } from 'lucide-react';
 import { theme } from '@/lib/theme';
@@ -21,8 +21,7 @@ interface CVDocument {
   updated_at: string;
 }
 
-// Inner component that uses useSearchParams (must be wrapped in Suspense)
-function CVListContent() {
+export default function CVListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [documents, setDocuments] = useState<CVDocument[]>([]);
@@ -634,18 +633,5 @@ function CVListContent() {
 
       </div>
     </div>
-  );
-}
-
-// Main page component with Suspense boundary
-export default function CVListPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">Loading CV tools...</p>
-      </div>
-    }>
-      <CVListContent />
-    </Suspense>
   );
 }

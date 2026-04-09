@@ -7,8 +7,10 @@ const JOBS_PER_SITEMAP = 1000;
  * Paginated job sitemap
  * Place at: app/sitemap-jobs/[page]/route.ts
  */
-export async function GET(_request: Request, props: { params: Promise<{ page: string }> }) {
-  const params = await props.params;
+export async function GET(
+  _request: Request,
+  { params }: { params: { page: string } }
+) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

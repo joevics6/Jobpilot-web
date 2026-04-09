@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default async function UKJobPage(props: { params: Promise<{ slug: string }> }) {
-  const params = await props.params;
+export default function UKJobPage({ params }: { params: { slug: string } }) {
   redirect(`/jobs/united-kingdom/${params.slug}`);
 }

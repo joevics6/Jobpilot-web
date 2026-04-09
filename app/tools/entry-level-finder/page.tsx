@@ -4,7 +4,6 @@ import { EntryLevelFinderClient } from './EntryLevelFinderClient';
 import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
-export const dynamic = 'force-dynamic';
 
 export default function EntryLevelFinderPage() {
   return (

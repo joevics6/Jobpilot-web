@@ -5,7 +5,6 @@ import { GraduateTraineeFinderClient } from './GraduateTraineeFinderClient';
 import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
-export const dynamic = 'force-dynamic';
 
 export default function GraduateTraineeFinderPage() {
   return (

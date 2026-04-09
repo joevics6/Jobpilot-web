@@ -1,7 +1,5 @@
-// 📁 app/api/send-notification/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
+import { sendNotification } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,9 +8,6 @@ export async function POST(request: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: 'Token required' }, { status: 400 });
     }
-
-    // Lazy import Firebase only when actually sending notification
-    const { sendNotification } = await import('@/lib/firebase-admin');
 
     const result = await sendNotification(token, title, body, data);
 

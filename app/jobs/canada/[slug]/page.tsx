@@ -5,11 +5,10 @@ import { Metadata } from 'next';
 
 export const revalidate = false;
 
-export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const params = await props.params;
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const supabase = createClient();
   const { slug } = params;
-
+  
   const { data: job, error } = await supabase
     .from('jobs')
     .select('*')
@@ -33,11 +32,10 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   };
 }
 
-export default async function CanadaJobPage(props: { params: Promise<{ slug: string }> }) {
-  const params = await props.params;
+export default async function CanadaJobPage({ params }: { params: { slug: string } }) {
   const supabase = createClient();
   const { slug } = params;
-
+  
   const { data: job, error } = await supabase
     .from('jobs')
     .select('*')

@@ -5,7 +5,6 @@ import VisaFinderClient from './VisaFinderClient';
 import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
-export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Jobs with Visa Sponsorship — Find Sponsored Work Abroad, Travel Nurse Jobs & Global Career Opportunities 2026',

@@ -12,7 +12,6 @@ import AdUnit from '@/components/ads/AdUnit';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 export const revalidate = false;
 export const dynamicParams = true;
-export const dynamic = 'force-dynamic';
 
 function getSupabase() {
   return createClient(
@@ -56,8 +55,7 @@ export async function generateStaticParams() {
   }));
 }
 
-export async function generateMetadata(props: { params: Promise<PageParams> }): Promise<Metadata> {
-  const params = await props.params;
+export async function generateMetadata({ params }: { params: PageParams }): Promise<Metadata> {
   const page = await getTownPage(params.country, params.state, params.town);
   if (!page) return { title: 'Jobs | JobMeter' };
 
@@ -77,8 +75,7 @@ export async function generateMetadata(props: { params: Promise<PageParams> }): 
   };
 }
 
-export default async function TownJobsPage(props: { params: Promise<PageParams> }) {
-  const params = await props.params;
+export default async function TownJobsPage({ params }: { params: PageParams }) {
   const page = await getTownPage(params.country, params.state, params.town);
   if (!page) notFound();
 
@@ -100,8 +97,10 @@ export default async function TownJobsPage(props: { params: Promise<PageParams> 
   return (
     <>
       <BreadcrumbListSchema items={breadcrumbItems} />
+
       {/* Job list — first thing users see */}
       <JobList initialCountry={page.country} initialState={page.state} initialTown={page.town} />
+
       {/* ── TOWN CONTENT ─────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
 
@@ -243,6 +242,7 @@ export default async function TownJobsPage(props: { params: Promise<PageParams> 
         )}
 
       </div>
+
       {/* Mobile Bottom Ad */}
       <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100" style={{ height: '50px', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50px', overflow: 'hidden' }}>

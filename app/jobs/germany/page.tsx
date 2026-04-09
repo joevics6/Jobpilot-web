@@ -4,7 +4,6 @@ import { BreadcrumbListSchema } from '@/components/seo/StructuredData';
 import AdUnit from '@/components/ads/AdUnit';
 
 export const revalidate = false;
-export const dynamic = 'force-dynamic';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 
