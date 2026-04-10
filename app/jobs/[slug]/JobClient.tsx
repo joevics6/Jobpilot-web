@@ -100,14 +100,16 @@ function getRandomItems<T>(arr: T[], n: number): T[] {
   return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 }
 
-
-export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?: any[] }) {
+export default function JobClient({ job, relatedJobs, companies }: { 
+  job: any; 
+  relatedJobs?: any[]; 
+  companies?: any[]; 
+}) {
   const router = useRouter();
   const jobId = job.id;
   const { toast } = useToast();
   
   const [saved, setSaved] = useState(false);
-  const [companies, setCompanies] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [applied, setApplied] = useState(false);
   const [upgradeErrorType, setUpgradeErrorType] = useState<'PREMIUM_REQUIRED' | 'QUOTA_EXCEEDED' | 'INSUFFICIENT_CREDITS' | null>(null);
@@ -116,7 +118,6 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
   const [copied, setCopied] = useState<string | null>(null);
   const [similarJobs, setSimilarJobs] = useState<any[]>(relatedJobs || []);
   const [companyJobs, setCompanyJobs] = useState<any[]>([]);
-  const [userCountry, setUserCountry] = useState<string | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [showEmail, setShowEmail] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
@@ -154,30 +155,6 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
     setIsAnchorClosed(true);
   };
 
-  const loadCompanyJobs = async () => {
-    try {
-      const companyName = getCompanyName();
-      if (!companyName || companyName === 'Unknown Company') return;
-
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('id, title, company, location, category, sector, slug')
-        .eq('company', companyName)
-        .neq('id', jobId)
-        .eq('is_published', true)
-        .limit(5);
-
-      if (error) {
-        console.error('Error loading company jobs:', error);
-        return;
-      }
-
-      setCompanyJobs(data || []);
-    } catch (error) {
-      console.error('Error loading company jobs:', error);
-    }
-  };
-
   const handleShare = async () => {
     const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/jobs/${job.slug || job.id}`;
     const shareText = `Check out this job: ${job.title} at ${getCompanyName()}`;
@@ -205,20 +182,10 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
     checkAuth();
     loadSavedStatus();
     loadAppliedStatus();
-    loadCompanies();
-    loadCompanyJobs();
     
-    const detectUserCountry = async () => {
-      try {
-        const response = await fetch('https://ipapi.co/json/');
-        const data = await response.json();
-        setUserCountry(data.country_name || 'Nigeria');
-      } catch (error) {
-        setUserCountry('Nigeria');
-      }
-    };
-    detectUserCountry();
-    
+    // Removed loadCompanies() and loadCompanyJobs() 
+    // Companies now passed from server via Cloudflare
+
     if (!relatedJobs || relatedJobs.length === 0) {
       loadSimilarJobs();
     }
@@ -246,90 +213,6 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
     }
   };
 
-  const loadCompanies = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name, slug, logo_url')
-        .eq('is_published', true);
-
-      if (error) {
-        console.error('Error loading companies:', error);
-        return;
-      }
-
-      setCompanies(data || []);
-    } catch (error) {
-      console.error('Error loading companies:', error);
-    }
-  };
-
-  const loadSimilarJobs = async () => {
-    try {
-      const FIELDS = 'id, title, company, location, category, sector, role_category, slug';
-      const TARGET = 10;
-
-      const jobLocation = typeof job.location === 'object' ? job.location : null;
-      const jobCountry = (jobLocation?.country || '').toLowerCase().trim();
-      const jobIsRemote = !jobCountry || jobCountry === 'global';
-
-      const matchesCountry = (j: any): boolean => {
-        const jLoc = typeof j.location === 'object' ? j.location : null;
-        const jCountry = (jLoc?.country || '').toLowerCase().trim();
-        const jRemote = jLoc?.remote === true;
-        const jHasCountry = !!jCountry && jCountry !== 'global';
-        if (jobIsRemote) return jRemote || !jHasCountry;
-        return jCountry === jobCountry || (jRemote && !jHasCountry);
-      };
-
-      const collected: any[] = [];
-      const seenIds = new Set<string>([jobId]);
-
-      const addFiltered = (rows: any[] | null) => {
-        for (const j of rows || []) {
-          if (!seenIds.has(j.id) && matchesCountry(j)) {
-            seenIds.add(j.id);
-            collected.push(j);
-          }
-        }
-      };
-
-      if (job.role_category && collected.length < TARGET) {
-        const { data } = await supabase
-          .from('jobs')
-          .select(FIELDS)
-          .eq('role_category', job.role_category)
-          .eq('is_published', true)
-          .limit(40);
-        addFiltered(data);
-      }
-
-      if (job.category && collected.length < TARGET) {
-        const { data } = await supabase
-          .from('jobs')
-          .select(FIELDS)
-          .eq('category', job.category)
-          .eq('is_published', true)
-          .limit(40);
-        addFiltered(data);
-      }
-
-      if (job.sector && collected.length < TARGET) {
-        const { data } = await supabase
-          .from('jobs')
-          .select(FIELDS)
-          .eq('sector', job.sector)
-          .eq('is_published', true)
-          .limit(40);
-        addFiltered(data);
-      }
-
-      setSimilarJobs(collected.slice(0, TARGET));
-    } catch (error) {
-      console.error('Error loading similar jobs:', error);
-    }
-  };
-
   const loadSavedStatus = () => {
     if (typeof window === 'undefined') return;
     const saved = localStorage.getItem(STORAGE_KEYS.SAVED_JOBS);
@@ -338,6 +221,35 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
         const savedArray = JSON.parse(saved);
         setSaved(savedArray.includes(jobId));
       } catch (e) {}
+    }
+  };
+
+  const loadAppliedStatus = () => {
+    if (typeof window === 'undefined') return;
+    const applied = localStorage.getItem(STORAGE_KEYS.APPLIED_JOBS);
+    if (applied) {
+      try {
+        const appliedArray = JSON.parse(applied);
+        setApplied(appliedArray.includes(jobId));
+      } catch (e) {}
+    }
+  };
+
+  const loadSimilarJobs = async () => {
+    try {
+      const params = new URLSearchParams({ limit: '10', exclude: jobId });
+      if (job.role_category) params.set('role_category', job.role_category);
+      if (job.category) params.set('category', job.category);
+      if (job.sector) params.set('sector', job.sector);
+
+      const res = await fetch(
+        `https://jobs-api.joevicspro.workers.dev/jobs?${params.toString()}`
+      );
+      if (!res.ok) throw new Error('Related jobs fetch failed');
+      const data = await res.json();
+      setSimilarJobs(data.jobs || []);
+    } catch (error) {
+      console.error('Error loading similar jobs:', error);
     }
   };
 
@@ -353,17 +265,6 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
       : [...savedArray, jobId];
     localStorage.setItem(STORAGE_KEYS.SAVED_JOBS, JSON.stringify(newSaved));
     setSaved(newSaved.includes(jobId));
-  };
-
-  const loadAppliedStatus = () => {
-    if (typeof window === 'undefined') return;
-    const applied = localStorage.getItem(STORAGE_KEYS.APPLIED_JOBS);
-    if (applied) {
-      try {
-        const appliedArray = JSON.parse(applied);
-        setApplied(appliedArray.includes(jobId));
-      } catch (e) {}
-    }
   };
 
   const getCompanyName = () => {
@@ -406,8 +307,8 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
       'entry-level': 'Entry Level (0-2 years)', 'Junior': 'Junior (1-3 years)',
       'junior': 'Junior (1-3 years)', 'Mid-level': 'Mid-level (3-5 years)',
       'mid-level': 'Mid-level (3-5 years)', 'Mid level': 'Mid-level (3-5 years)',
-      'mid level': 'Mid-level (3-5 years)', 'Senior': 'Senior (5-8 years)',
-      'senior': 'Senior (5-8 years)', 'Lead': 'Lead (8-12 years)', 'lead': 'Lead (8-12 years)',
+      'Senior': 'Senior (5-8 years)', 'senior': 'Senior (5-8 years)',
+      'Lead': 'Lead (8-12 years)', 'lead': 'Lead (8-12 years)',
       'Executive': 'Executive (12+ years)', 'executive': 'Executive (12+ years)',
     };
     return experienceMap[normalizedLevel] || level;
@@ -565,7 +466,7 @@ export default function JobClient({ job, relatedJobs }: { job: any; relatedJobs?
                         </>
                       );
                     }
-                    const matchedCompany = companies.find(c => c.name === companyName);
+                    const matchedCompany = companies?.find((c: any) => c.name === companyName);
                     return (
                       <>
                         {matchedCompany?.slug ? (

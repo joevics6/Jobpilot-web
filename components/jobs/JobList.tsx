@@ -271,10 +271,14 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
     return popularRoles.filter(role => role.toLowerCase().includes(lowerQuery)).slice(0, 8);
   };
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  const checkAuth = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+  // ── Auth — single onAuthStateChange listener, no separate checkAuth call ────
+  // onAuthStateChange fires immediately with the current session on mount,
+  // so it replaces the old checkAuth() call entirely.
+  useEffect(() => {
+    loadSavedJobs();
+    loadAppliedJobs();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user);
         fetchUserProfile(session.user);
@@ -284,28 +288,7 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
         setUserName(null);
         setUserOnboardingData(null);
       }
-    } catch (error) {
-      console.error('Error checking auth:', error);
-    } finally {
       setAuthChecked(true);
-    }
-  };
-
-  useEffect(() => {
-    checkAuth();
-    loadSavedJobs();
-    loadAppliedJobs();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user);
-        fetchUserProfile(session.user);
-        fetchUserOnboardingData(session.user);
-      } else {
-        setUser(null);
-        setUserName(null);
-        setUserOnboardingData(null);
-      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -336,54 +319,15 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
     if (initialTown) setFilters(prev => ({ ...prev, town: initialTown }));
   }, [initialTown]);
 
-  // ── Country detection + hint ────────────────────────────────────────────────
+  // ── Country restore from localStorage (no geo API call) ────────────────────
   useEffect(() => {
     if (initialCountry) return;
-    const detectCountry = async () => {
-      const userChangedCountry = localStorage.getItem('user_changed_country');
-      if (userChangedCountry === 'true') {
-        const savedCountry = localStorage.getItem('user_country');
-        if (savedCountry && savedCountry !== 'Global') {
-          setDetectedCountry(savedCountry);
-          setFilters(prev => ({ ...prev, country: savedCountry }));
-        }
-        return;
-      }
-      const hasVisited = localStorage.getItem('has_visited_jobs');
-      if (!hasVisited) {
-        try {
-          const response = await fetch('/api/geo');
-          const data = await response.json();
-          const country = data.country || 'Nigeria';
-          setDetectedCountry(country);
-          setFilters(prev => ({ ...prev, country }));
-        } catch {
-          setDetectedCountry('Nigeria');
-          setFilters(prev => ({ ...prev, country: 'Nigeria' }));
-        }
-        // Show gentle hint instead of popup
-        setShowCountryHint(true);
-        // Auto hide after 6 seconds
-        setTimeout(() => setShowCountryHint(false), 6000);
-      } else {
-        const savedCountry = localStorage.getItem('user_country');
-        if (savedCountry && savedCountry !== 'Global') {
-          setDetectedCountry(savedCountry);
-          setFilters(prev => ({ ...prev, country: savedCountry }));
-        }
-      }
-    };
-    detectCountry();
-  }, []);
-
-  // Hide country hint when user interacts with dropdown or clicks anywhere
-  useEffect(() => {
-    const hideHint = () => setShowCountryHint(false);
-    if (showCountryHint) {
-      document.addEventListener('click', hideHint);
-      return () => document.removeEventListener('click', hideHint);
+    const savedCountry = localStorage.getItem('user_country');
+    if (savedCountry && savedCountry !== 'Global') {
+      setDetectedCountry(savedCountry);
+      setFilters(prev => ({ ...prev, country: savedCountry }));
     }
-  }, [showCountryHint]);
+  }, []);
 
   // ── Desktop detection ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -421,35 +365,65 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
     if (sortParam === 'latest' || sortParam === 'salary') setSortBy(sortParam);
   }, [searchParams]);
 
+  // ── Profile cache helpers ───────────────────────────────────────────────────
+  const PROFILE_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
   const fetchUserProfile = async (u: any) => {
     if (!u) return;
+    const cacheKey = `profile_cache_${u.id}`;
+    const tsKey = `profile_cache_ts_${u.id}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      const ts = localStorage.getItem(tsKey);
+      if (cached && ts && Date.now() - parseInt(ts, 10) < PROFILE_CACHE_TTL) {
+        setUserName(JSON.parse(cached).full_name || null);
+        return;
+      }
+    } catch {}
     const { data, error } = await supabase.from('profiles').select('full_name').eq('id', u.id).single();
-    if (!error && data) setUserName(data.full_name || null);
+    if (!error && data) {
+      setUserName(data.full_name || null);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        localStorage.setItem(tsKey, Date.now().toString());
+      } catch {}
+    }
   };
 
   const fetchUserOnboardingData = async (u: any) => {
     if (!u) return;
+    const cacheKey = `onboarding_cache_${u.id}`;
+    const tsKey = `onboarding_cache_ts_${u.id}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      const ts = localStorage.getItem(tsKey);
+      if (cached && ts && Date.now() - parseInt(ts, 10) < PROFILE_CACHE_TTL) {
+        setUserOnboardingData(JSON.parse(cached));
+        return;
+      }
+    } catch {}
     try {
       const { data, error } = await supabase.from('onboarding_data').select('*').eq('user_id', u.id).single();
       if (error && error.code !== 'PGRST116') { console.error('Error fetching onboarding data:', error); return; }
-      if (data) {
-        setUserOnboardingData({
-          target_roles: data.target_roles || [],
-          cv_skills: data.cv_skills || [],
-          preferred_locations: data.preferred_locations || [],
-          experience_level: data.experience_level || null,
-          salary_min: data.salary_min || null,
-          salary_max: data.salary_max || null,
-          job_type: data.job_type || null,
-          sector: data.sector || null,
-        });
-      } else {
-        setUserOnboardingData({
-          target_roles: [], cv_skills: [], preferred_locations: [],
-          experience_level: null, salary_min: null, salary_max: null,
-          job_type: null, sector: null,
-        });
-      }
+      const parsed = data ? {
+        target_roles: data.target_roles || [],
+        cv_skills: data.cv_skills || [],
+        preferred_locations: data.preferred_locations || [],
+        experience_level: data.experience_level || null,
+        salary_min: data.salary_min || null,
+        salary_max: data.salary_max || null,
+        job_type: data.job_type || null,
+        sector: data.sector || null,
+      } : {
+        target_roles: [], cv_skills: [], preferred_locations: [],
+        experience_level: null, salary_min: null, salary_max: null,
+        job_type: null, sector: null,
+      };
+      setUserOnboardingData(parsed);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(parsed));
+        localStorage.setItem(tsKey, Date.now().toString());
+      } catch {}
     } catch (error) {
       console.error('Error fetching onboarding data:', error);
     }
@@ -1087,6 +1061,29 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
               className="hidden"
             />
 
+            {/* Results count + sort + refresh */}
+            {!latestJobsLoading && latestJobs.length > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {filteredJobs.length > 0 && <p className="text-sm font-medium" style={{ color: theme.colors.text.primary }}>{filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found</p>}
+                  {hasActiveFilters() && <button onClick={clearAllFilters} className="text-xs text-red-600 hover:text-red-700 font-medium transition-colors">Clear all filters</button>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {refreshingMatches && <div className="flex items-center gap-2 text-sm" style={{ color: theme.colors.text.secondary }}><RefreshCw size={14} className="animate-spin" />Refreshing...</div>}
+                  <button onClick={() => { const next = sortBy === 'latest' ? 'salary' : sortBy === 'salary' ? 'match' : 'latest'; setSortBy(next); const params = new URLSearchParams(searchParams.toString()); params.set('sort', next); router.replace(`${pathname}?${params.toString()}`); }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
+                    style={{ backgroundColor: theme.colors.background.DEFAULT, borderColor: theme.colors.border.DEFAULT }}>
+                    <ArrowUpDown size={12} />{sortBy === 'latest' ? 'Newest' : sortBy === 'salary' ? 'Salary' : 'Match'}
+                  </button>
+                  <button onClick={handleRefreshMatches} disabled={refreshingMatches}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all disabled:opacity-50"
+                    style={{ backgroundColor: theme.colors.background.DEFAULT, borderColor: theme.colors.border.DEFAULT }}>
+                    <RefreshCw size={12} className={refreshingMatches ? 'animate-spin' : ''} />Refresh
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Ad: Under location dropdown — always visible */}
             <div className="w-full overflow-hidden" style={{ margin: 0, padding: '10px 0 3px 0' }}>
               <AdUnit
@@ -1094,31 +1091,6 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
                 format="auto"
                 style={{ display: 'block', height: '100px' }}
               />
-            </div>
-
-            {/* Results count + sort + refresh */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {!latestJobsLoading && <p className="text-sm font-medium" style={{ color: theme.colors.text.primary }}>{filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found</p>}
-                {hasActiveFilters() && !latestJobsLoading && <button onClick={clearAllFilters} className="text-xs text-red-600 hover:text-red-700 font-medium transition-colors">Clear all filters</button>}
-              </div>
-              <div className="flex items-center gap-2">
-                {refreshingMatches && <div className="flex items-center gap-2 text-sm" style={{ color: theme.colors.text.secondary }}><RefreshCw size={14} className="animate-spin" />Refreshing...</div>}
-                {!latestJobsLoading && (
-                  <button onClick={() => { const next = sortBy === 'latest' ? 'salary' : sortBy === 'salary' ? 'match' : 'latest'; setSortBy(next); const params = new URLSearchParams(searchParams.toString()); params.set('sort', next); router.replace(`${pathname}?${params.toString()}`); }}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
-                    style={{ backgroundColor: theme.colors.background.DEFAULT, borderColor: theme.colors.border.DEFAULT }}>
-                    <ArrowUpDown size={12} />{sortBy === 'latest' ? 'Newest' : sortBy === 'salary' ? 'Salary' : 'Match'}
-                  </button>
-                )}
-                {!latestJobsLoading && (
-                  <button onClick={handleRefreshMatches} disabled={refreshingMatches}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all disabled:opacity-50"
-                    style={{ backgroundColor: theme.colors.background.DEFAULT, borderColor: theme.colors.border.DEFAULT }}>
-                    <RefreshCw size={12} className={refreshingMatches ? 'animate-spin' : ''} />Refresh
-                  </button>
-                )}
-              </div>
             </div>
 
             <JobFilters filters={filters} onFiltersChange={(newFilters: any) => {
@@ -1138,9 +1110,17 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
               router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname);
             }} isOpen={filtersOpen} onToggle={() => setFiltersOpen(!filtersOpen)} />
 
+            {/* Loading spinner — shown while jobs haven't arrived yet */}
+            {latestJobs.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-10">
+                <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mb-3"></div>
+                <p className="text-sm" style={{ color: theme.colors.text.secondary }}>Loading jobs...</p>
+              </div>
+            )}
+
             {/* Job list */}
             <div className="py-2">
-              {activeTab === 'latest' && (
+              {activeTab === 'latest' && latestJobs.length > 0 && (
                 <>
                   {sortedJobs.length === 0 && !latestJobsLoading ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center max-w-md mx-auto">
@@ -1176,9 +1156,6 @@ export default function JobList({ initialJobs, initialCountry, initialRoleCatego
                           )}
                         </React.Fragment>
                       ))}
-                      {latestJobsLoading && paginatedJobs.length === 0 && (
-                        <div className="flex items-center justify-center py-6"><p style={{ color: theme.colors.text.secondary }}>Loading jobs...</p></div>
-                      )}
                     </>
                   )}
 
