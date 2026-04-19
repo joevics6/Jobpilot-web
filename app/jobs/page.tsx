@@ -1,9 +1,12 @@
 import JobList from '@/components/jobs/JobList';
+import TimedJobPopup from '@/components/TimedJobPopup';
 import { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic'; // always SSR — Redis is the cache layer, not Next.js ISR
+// Keep force-dynamic if you want fresh data on every visit
+export const dynamic = 'force-dynamic';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
+const CLOUDFLARE_WORKER_URL = 'https://jobs-api.joevicspro.workers.dev';
 
 export const metadata: Metadata = {
   title: 'Find Jobs Near You — Search & Apply for Open Positions | JobMeter',
@@ -26,23 +29,45 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Fetch jobs directly from the Cloudflare Worker
+ */
 async function getJobs(): Promise<any[]> {
   try {
-    const res = await fetch(`${siteUrl}/api/jobs`, {
+    const res = await fetch(CLOUDFLARE_WORKER_URL, {
       cache: 'no-store',
     });
+
     if (!res.ok) return [];
-    const { jobs } = await res.json();
-    return Array.isArray(jobs) ? jobs : [];
-  } catch {
+
+    const data = await res.json();
+    // Support both { jobs: [] } and direct array responses
+    return Array.isArray(data) ? data : (data.jobs || []);
+  } catch (error) {
+    console.error('Error fetching jobs for SSR:', error);
     return [];
   }
 }
 
-export default async function JobsPage() {
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   const jobs = await getJobs();
 
-  // ── JSON-LD: ItemList of top 20 jobs for Google ───────────────────────────
+  // ── Check if Nigeria filter is applied ─────────────────────────────
+  const locationParam = typeof searchParams.location === 'string' 
+    ? searchParams.location.toLowerCase() 
+    : '';
+  
+  const countryParam = typeof searchParams.country === 'string' 
+    ? searchParams.country.toLowerCase() 
+    : '';
+
+  const isNigeriaFilter = locationParam === 'nigeria' || countryParam === 'nigeria';
+
+  // ── JSON-LD: ItemList of top 20 jobs for Google ─────────────────────
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -77,7 +102,14 @@ export default async function JobsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <JobList initialJobs={jobs} />
+
+      <main className="min-h-screen bg-white">
+        {/* Pass the pre-fetched jobs from Cloudflare into the client component */}
+        <JobList initialJobs={jobs} />
+      </main>
+
+      {/* Timed Job Popup - Force show when Nigeria filter is active */}
+      <TimedJobPopup forceShow={isNigeriaFilter} />
     </>
   );
 }

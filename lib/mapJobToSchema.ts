@@ -1,39 +1,21 @@
 // lib/mapJobToSchema.ts
-// COMPREHENSIVE NULL-SAFE Google JobPosting schema generator
-// Handles ALL potential null values from database
-
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.jobmeter.app";
 
 export function mapJobToSchema(job: any) {
-  // -----------------------------
-  // CLEAN DESCRIPTION - NULL SAFE
-  // -----------------------------
   const getCleanDescription = () => {
     let desc =
       job.description_html ||
       job.description ||
       job.about_role ||
       "Job description not available";
-
-    // Ensure desc is a string
-    if (typeof desc !== 'string') {
-      desc = String(desc);
-    }
-
-    // Remove application links completely
+    if (typeof desc !== "string") desc = String(desc);
     desc = desc.replace(/<a[^>]*>.*?<\/a>/gi, "");
     desc = desc.replace(/https?:\/\/\S+/gi, "");
     desc = desc.replace(/To apply[^<]*/gi, "");
-
-    // Fix dangling closing tags like </a>
     desc = desc.replace(/<\/a>/gi, "");
-
     return desc;
   };
 
-  // -----------------------------
-  // Helper: Company Name - NULL SAFE
-  // -----------------------------
   const getCompanyName = () => {
     if (!job.company) return "Confidential Employer";
     if (typeof job.company === "string") return job.company;
@@ -41,56 +23,27 @@ export function mapJobToSchema(job: any) {
     return "Confidential Employer";
   };
 
-  // -----------------------------
-  // Helper: Job Title - NULL SAFE
-  // -----------------------------
-  const getJobTitle = () => {
-    const baseTitle = job.title || job.role || "Untitled Job";
-    const companyName = getCompanyName();
-
-    // If company is "Confidential Employer", append location to title
-    if (companyName === "Confidential Employer") {
-      const location = getLocationString();
-      if (location) {
-        return `${baseTitle} in ${location}`;
-      }
-    }
-
-    // Otherwise, return title as-is
-    return baseTitle;
-  };
-
-  // -----------------------------
-  // Helper: Get Location String - NULL SAFE
-  // -----------------------------
   const getLocationString = () => {
-    // NULL SAFETY: Check if location exists
     if (!job.location) return null;
-    
-    // Priority: State > City > Country
-    if (job.location.state) {
-      return job.location.state;
-    }
-    if (job.location.city) {
-      return job.location.city;
-    }
-    if (job.location.country && job.location.country !== "NG") {
-      return job.location.country;
-    }
-    // If remote, return "Remote"
-    if (job.location.remote) {
-      return "Remote";
-    }
+    if (job.location.state) return job.location.state;
+    if (job.location.city) return job.location.city;
+    if (job.location.country && job.location.country !== "NG") return job.location.country;
+    if (job.location.remote) return "Remote";
     return null;
   };
 
-  // -----------------------------
-  // Helper: Employment Type - NULL SAFE
-  // -----------------------------
-  const getEmploymentType = () => {
-    // NULL SAFETY: Handle null/undefined employment_type
-    const t = (job.employment_type || job.job_type || "").toLowerCase();
+  const getJobTitle = () => {
+    const baseTitle = job.title || job.role || "Untitled Job";
+    const companyName = getCompanyName();
+    if (companyName === "Confidential Employer") {
+      const location = getLocationString();
+      if (location) return `${baseTitle} in ${location}`;
+    }
+    return baseTitle;
+  };
 
+  const getEmploymentType = () => {
+    const t = (job.employment_type || job.job_type || "").toLowerCase();
     const map: Record<string, string> = {
       "full-time": "FULL_TIME",
       "full time": "FULL_TIME",
@@ -105,283 +58,211 @@ export function mapJobToSchema(job: any) {
       intern: "INTERN",
       volunteer: "VOLUNTEER",
     };
-
     return [map[t] || "FULL_TIME"];
   };
 
-  // -----------------------------
-  // Experience → Months - NULL SAFE
-  // -----------------------------
   const getExperienceMonths = (level = "") => {
-    // NULL SAFETY: Handle null/undefined level
     const l = (level || "").toLowerCase();
-
     const map: Record<string, number> = {
-      "entry-level": 0,
-      "entry level": 0,
-      entry: 0,
+      "entry-level": 0, "entry level": 0, entry: 0,
       junior: 12,
-      "mid-level": 36,
-      "mid level": 36,
-      mid: 36,
-      senior: 60,
-      lead: 84,
-      executive: 120,
-      manager: 72,
+      "mid-level": 36, "mid level": 36, mid: 36,
+      senior: 60, lead: 84, executive: 120, manager: 72,
     };
-
     return map[l] || 36;
   };
 
-  // -----------------------------
-  // Job Location - NULL SAFE
-  // -----------------------------
+  // ─── FIXED: Only include address fields that have real values ───────────
   const getJobLocation = () => {
-    // NULL SAFETY: Check if location exists
+    // Remote-only jobs: no jobLocation at all
     if (!job.location || job.location.remote) return undefined;
 
-    return {
-      "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        streetAddress:
-          job.location.streetAddress || job.location.street_address || "",
-        addressLocality: job.location.city || "Not specified",
-        addressRegion:
-          job.location.state || job.location.city || "Not specified",
-        postalCode:
-          job.location.postalCode || job.location.postal_code || "",
-        addressCountry: job.location.country || "NG",
-      },
+    const city = job.location.city;
+    const state = job.location.state;
+    const country = job.location.country || "NG";
+
+    // Need at least a city or state to produce a valid address
+    if (!city && !state) return undefined;
+
+    const address: Record<string, string> = {
+      "@type": "PostalAddress",
+      addressCountry: country,
     };
+
+    if (city) address.addressLocality = city;
+    if (state) address.addressRegion = state;
+
+    // Only include streetAddress / postalCode if they're non-empty strings
+    const street = job.location.streetAddress || job.location.street_address;
+    if (street && street.trim()) address.streetAddress = street.trim();
+
+    const postal = job.location.postalCode || job.location.postal_code;
+    if (postal && String(postal).trim()) address.postalCode = String(postal).trim();
+
+    return { "@type": "Place", address };
   };
 
-  // -----------------------------
-  // validThrough - NULL SAFE
-  // -----------------------------
+  // ─── FIXED: Robust fallback that can't produce null ────────────────────
   const getValidThrough = () => {
     if (job.deadline) return job.deadline;
-
-    const base = new Date(job.posted_date || job.created_at || Date.now());
+    const raw = job.posted_date || job.created_at;
+    const base = raw ? new Date(raw) : new Date();
+    if (isNaN(base.getTime())) {
+      // Unparseable date — default to 30 days from now
+      const fallback = new Date();
+      fallback.setDate(fallback.getDate() + 30);
+      return fallback.toISOString().split("T")[0];
+    }
     base.setDate(base.getDate() + 30);
-
     return base.toISOString().split("T")[0];
   };
 
-  // -----------------------------
-  // Base Salary - NULL SAFE
-  // -----------------------------
+  // ─── FIXED: Omit baseSalary entirely when no real salary data ──────────
   const getBaseSalary = () => {
-    if (!job.salary_range) {
-      return {
-        "@type": "MonetaryAmount",
-        currency: "NGN",
-        value: {
-          "@type": "QuantitativeValue",
-          value: 0,
-          unitText: "MONTH",
-        },
-      };
-    }
+    if (!job.salary_range) return undefined;
 
-    const { min, max, currency = "NGN", period = "MONTH" } =
-      job.salary_range || {};
+    const { min, max, currency, period } = job.salary_range;
 
-    // NULL SAFETY: Handle null period
-    const normalizedPeriod = period ? period.toUpperCase() : "MONTH";
+    // If neither min nor max exists, skip — value: 0 is rejected by Google
+    if (!min && !max) return undefined;
+
+    const resolvedCurrency = currency || "NGN";
+    const unitText = period ? period.toUpperCase() : "MONTH";
+
+    const quantValue: Record<string, any> = {
+      "@type": "QuantitativeValue",
+      unitText,
+    };
+
+    if (min) quantValue.minValue = min;
+    if (max) quantValue.maxValue = max;
+    // Google prefers minValue/maxValue over value; only set value as fallback
+    if (!min || !max) quantValue.value = min || max;
 
     return {
       "@type": "MonetaryAmount",
-      currency,
-      value: {
-        "@type": "QuantitativeValue",
-        minValue: min || undefined,
-        maxValue: max || undefined,
-        value: min || max || undefined,
-        unitText: normalizedPeriod,
-      },
+      currency: resolvedCurrency,
+      value: quantValue,
     };
   };
 
-  // -----------------------------
-  // Skills Array - NULL SAFE
-  // -----------------------------
   const getSkills = () => {
     const skills = job.skills_required || job.ai_enhanced_skills || [];
-    // NULL SAFETY: Ensure it's an array and has items
     if (!Array.isArray(skills) || skills.length === 0) return undefined;
-    // NULL SAFETY: Filter out null/undefined items
-    const validSkills = skills.filter(Boolean);
-    return validSkills.length > 0 ? validSkills.join(", ") : undefined;
+    const valid = skills.filter(Boolean);
+    return valid.length > 0 ? valid.join(", ") : undefined;
   };
 
-  // -----------------------------
-  // Responsibilities Array - NULL SAFE
-  // -----------------------------
   const getResponsibilities = () => {
-    const responsibilities = job.responsibilities || [];
-    // NULL SAFETY: Ensure it's an array and has items
-    if (!Array.isArray(responsibilities) || responsibilities.length === 0) return undefined;
-    // NULL SAFETY: Filter out null/undefined items
-    const validResponsibilities = responsibilities.filter(Boolean);
-    return validResponsibilities.length > 0 ? validResponsibilities.join("; ") : undefined;
+    const r = job.responsibilities || [];
+    if (!Array.isArray(r) || r.length === 0) return undefined;
+    const valid = r.filter(Boolean);
+    return valid.length > 0 ? valid.join("; ") : undefined;
   };
 
-  // -----------------------------
-  // Qualifications Array - NULL SAFE
-  // -----------------------------
   const getQualifications = () => {
-    const qualifications = job.qualifications || [];
-    // NULL SAFETY: Ensure it's an array and has items
-    if (!Array.isArray(qualifications) || qualifications.length === 0) return undefined;
-    // NULL SAFETY: Filter out null/undefined items
-    const validQualifications = qualifications.filter(Boolean);
-    return validQualifications.length > 0 ? validQualifications.join("; ") : undefined;
+    const q = job.qualifications || [];
+    if (!Array.isArray(q) || q.length === 0) return undefined;
+    const valid = q.filter(Boolean);
+    return valid.length > 0 ? valid.join("; ") : undefined;
   };
 
-  // -----------------------------
-  // Benefits Array - NULL SAFE
-  // -----------------------------
   const getBenefits = () => {
-    const benefits = job.benefits || [];
-    // NULL SAFETY: Ensure it's an array and has items
-    if (!Array.isArray(benefits) || benefits.length === 0) return undefined;
-    // NULL SAFETY: Filter out null/undefined items
-    const validBenefits = benefits.filter(Boolean);
-    return validBenefits.length > 0 ? validBenefits.join(", ") : undefined;
+    const b = job.benefits || [];
+    if (!Array.isArray(b) || b.length === 0) return undefined;
+    const valid = b.filter(Boolean);
+    return valid.length > 0 ? valid.join(", ") : undefined;
   };
 
-  // -----------------------------
-  // Application URL - NULL SAFE
-  // -----------------------------
   const getApplicationUrl = () => {
     if (job.application?.url) return job.application.url;
     if (job.application_url) return job.application_url;
     return undefined;
   };
 
-  // -----------------------------
-  // Work Hours - NULL SAFE
-  // -----------------------------
   const getWorkHours = () => {
-    const empType = (job.employment_type || "").toLowerCase();
-    if (empType === "full-time" || empType === "full time" || empType === "fulltime") {
-      return "40 hours per week";
-    }
+    const t = (job.employment_type || "").toLowerCase();
+    if (["full-time", "full time", "fulltime"].includes(t)) return "40 hours per week";
     return undefined;
   };
 
-  // -----------------------------
-  // Industry - NULL SAFE
-  // -----------------------------
-  const getIndustry = () => {
-    return job.company?.industry || job.sector || job.category || undefined;
-  };
+  const getIndustry = () =>
+    job.company?.industry || job.sector || job.category || undefined;
 
-  // -----------------------------
-  // FINAL SCHEMA
-  // -----------------------------
+  const isRemote = Boolean(job.location?.remote);
+  const jobLocation = getJobLocation();
+
   const schema: any = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
-
-    // NULL SAFE: Title
     title: getJobTitle(),
-
-    // NULL SAFE: Description
     description: getCleanDescription(),
-
-    // NULL SAFE: Date Posted
     datePosted:
-      job.created_at ||
-      job.posted_date ||
-      new Date().toISOString().split("T")[0],
-
-    // NULL SAFE: Valid Through
+      job.created_at || job.posted_date || new Date().toISOString().split("T")[0],
     validThrough: getValidThrough(),
-
-    // NULL SAFE: Employment Type
     employmentType: getEmploymentType(),
-
-    // NULL SAFE: Hiring Organization
     hiringOrganization: {
       "@type": "Organization",
       name: getCompanyName(),
-      industry: getIndustry(),
+      ...(getIndustry() && { industry: getIndustry() }),
     },
-
-    // NULL SAFE: Employment Unit
-    employmentUnit: {
-      "@type": "Organization",
-      name: getCompanyName(),
-    },
-
-    // NULL SAFE: Job Location
-    jobLocation: getJobLocation(),
-
-    // NULL SAFE: Job Location Type
-    jobLocationType: job.location?.remote ? "TELECOMMUTE" : undefined,
-
-    // NULL SAFE: Applicant Location Requirements
-    applicantLocationRequirements: {
-      "@type": "Country",
-      name: job.location?.country || "Nigeria",
-    },
-
-    // NULL SAFE: Base Salary
-    baseSalary: getBaseSalary(),
-
-    // NULL SAFE: Experience Requirements
-    experienceRequirements: job.experience_level
-      ? {
-          "@type": "OccupationalExperienceRequirements",
-          monthsOfExperience: getExperienceMonths(job.experience_level),
-        }
-      : undefined,
-
-    // NULL SAFE: Responsibilities
-    responsibilities: getResponsibilities(),
-
-    // NULL SAFE: Qualifications
-    qualifications: getQualifications(),
-
-    // NULL SAFE: Skills
-    skills: getSkills(),
-
-    // NULL SAFE: Job Benefits
-    jobBenefits: getBenefits(),
-
-    // NULL SAFE: Identifier
     identifier: {
       "@type": "PropertyValue",
       name: getCompanyName(),
       value: job.id || "unknown",
     },
-
-    // NULL SAFE: Work Hours
-    workHours: getWorkHours(),
-
-    // NULL SAFE: Application Contact
-    applicationContact: getApplicationUrl()
-      ? {
-          "@type": "ContactPoint",
-          url: getApplicationUrl(),
-        }
-      : undefined,
-
-    // Direct Apply
-    directApply: true,
-    
-    // NULL SAFE: URL with fallback
     url: `${siteUrl}/jobs/${job.slug || job.id}`,
+    directApply: true,
   };
 
-  // Remove undefined values to keep schema clean
-  Object.keys(schema).forEach((k) => {
-    if (schema[k] === undefined) {
-      delete schema[k];
-    }
-  });
+  // ─── FIXED: jobLocation + jobLocationType are mutually exclusive ────────
+  if (isRemote) {
+    // Remote jobs: jobLocationType required, jobLocation must be absent
+    schema.jobLocationType = "TELECOMMUTE";
+    schema.applicantLocationRequirements = {
+      "@type": "Country",
+      name: job.location?.country || "Nigeria",
+    };
+  } else if (jobLocation) {
+    // On-site jobs: jobLocation present, no jobLocationType
+    schema.jobLocation = jobLocation;
+    schema.applicantLocationRequirements = {
+      "@type": "Country",
+      name: job.location?.country || "NG",
+    };
+  }
+  // If neither: no location fields at all — Google will warn but not error
+
+  // Optional fields — only add when they have real data
+  const baseSalary = getBaseSalary();
+  if (baseSalary) schema.baseSalary = baseSalary;
+
+  if (job.experience_level) {
+    schema.experienceRequirements = {
+      "@type": "OccupationalExperienceRequirements",
+      monthsOfExperience: getExperienceMonths(job.experience_level),
+    };
+  }
+
+  const responsibilities = getResponsibilities();
+  if (responsibilities) schema.responsibilities = responsibilities;
+
+  const qualifications = getQualifications();
+  if (qualifications) schema.qualifications = qualifications;
+
+  const skills = getSkills();
+  if (skills) schema.skills = skills;
+
+  const benefits = getBenefits();
+  if (benefits) schema.jobBenefits = benefits;
+
+  const workHours = getWorkHours();
+  if (workHours) schema.workHours = workHours;
+
+  const appUrl = getApplicationUrl();
+  if (appUrl) {
+    schema.applicationContact = { "@type": "ContactPoint", url: appUrl };
+  }
 
   return schema;
 }

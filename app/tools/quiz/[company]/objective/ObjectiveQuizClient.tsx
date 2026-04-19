@@ -40,6 +40,8 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
   const [timerStarted, setTimerStarted] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string>('general');
   const [questionCount, setQuestionCount] = useState(20);
+  const [isAnchorClosed, setIsAnchorClosed] = useState(false);
+  const ANCHOR_HEIGHT = 100;
 
   useEffect(() => {
     const sectionParam = searchParams.get('section');
@@ -202,11 +204,6 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 py-6">
-          {/* Ad at the top of Results */}
-          <div className="mb-6">
-            <AdUnit slot="4198231153" format="auto" />
-          </div>
-
           <div className="bg-white rounded-xl p-6 text-center mb-6" style={{ border: `1px solid ${theme.colors.border.DEFAULT}` }}>
             <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3" 
                  style={{ backgroundColor: percentage >= 70 ? '#10B98120' : '#EF444420' }}>
@@ -216,6 +213,11 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
             </div>
             <p className="text-lg font-semibold text-gray-900">{score.correct} / {score.total} correct</p>
             {useTimer && <p className="text-gray-500 mt-1">Time spent: {formatTime(timeSpent)}</p>}
+          </div>
+
+          {/* Ad between score summary and question review */}
+          <div className="mb-6">
+            <AdUnit slot="4198231153" format="auto" />
           </div>
 
           <div className="space-y-4 mb-8">
@@ -255,6 +257,11 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
                 </div>
               );
             })}
+          </div>
+
+          {/* Ad after question review, before Try Again */}
+          <div className="mb-6">
+            <AdUnit slot="9751041788" format="auto" />
           </div>
 
           <button 
@@ -344,6 +351,13 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
           </div>
         </div>
 
+        {/* Mid-quiz ad: show between every 5th question (Q5, Q10, Q15...) */}
+        {(currentIndex + 1) % 5 === 0 && (
+          <div className="mb-4">
+            <AdUnit slot="4198231153" format="auto" />
+          </div>
+        )}
+
         <div className="flex gap-3">
           <button
             onClick={handlePrev}
@@ -375,10 +389,37 @@ export default function ObjectiveQuizClient({ company }: { company: string }) {
         </div>
       </div>
 
-      {/* Single Ad at the bottom under the quiz */}
-      <div className="px-4 pb-8 max-w-4xl mx-auto">
-        <AdUnit slot="9751041788" format="auto" />
-      </div>
+      {/* Mobile anchor spacer — prevents content hiding behind the bar */}
+      {!isAnchorClosed && (
+        <div className="lg:hidden" style={{ height: `${ANCHOR_HEIGHT}px` }} aria-hidden="true" />
+      )}
+
+      {/* Mobile Anchor Ad with Close Button */}
+      {!isAnchorClosed && (
+        <div
+          id="mobile-anchor-ad"
+          className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100 overflow-hidden"
+          style={{ height: `${ANCHOR_HEIGHT}px` }}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setIsAnchorClosed(true)}
+            className="absolute top-1.5 left-3 z-50 w-7 h-7 flex items-center justify-center bg-white rounded-full shadow text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            aria-label="Close bottom advertisement"
+          >
+            <X size={18} />
+          </button>
+          {/* Ad Container */}
+          <div className="w-full" style={{ height: `${ANCHOR_HEIGHT}px` }}>
+            <AdUnit
+              slot="3349195672"
+              format="auto"
+              fullWidthResponsive={true}
+              style={{ display: 'block', width: '100%', height: `${ANCHOR_HEIGHT}px` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

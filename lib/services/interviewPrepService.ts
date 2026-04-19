@@ -431,8 +431,7 @@ Evaluate this answer and provide constructive feedback.`;
       return result.nextQuestion;
     } catch (error: any) {
       console.error('Error getting next question:', error);
-      // Return null if we can't get next question (interview might be ending)
-      return null;
+      throw new Error(error.message || 'Failed to get next question');
     }
   }
 
@@ -458,35 +457,37 @@ Evaluate this answer and provide constructive feedback.`;
       }
     }
 
-    const INTERVIEWER_PROMPT = `You are a professional interviewer conducting a job interview. Your role is to act as the interviewer and ask relevant interview questions based on the job description and the candidate's CV/resume.
+    const chat = session.chat || [];
+    const questionsAsked = chat.filter(msg => msg.type === 'question').length;
+    const shouldEnd = questionsAsked >= 10;
 
-IMPORTANT: You are ONLY the INTERVIEWER. Your job is to ask the next interview question. Do NOT provide feedback or coaching - just ask the next question naturally.
+    const INTERVIEWER_PROMPT = `You are a recruiter at a company conducting a job interview over chat. You are professional, warm, and conversational — like a real recruiter, not a robot.
+
+IMPORTANT: You are ONLY the RECRUITER. Ask the next interview question. Do NOT provide feedback, coaching, or commentary on the candidate's answer — just ask the next question naturally, as a recruiter would in a real interview.
 
 Your response must be valid JSON only, matching this exact structure:
 
 {
-  "nextQuestion": "The next interview question, or null if interview should end"
+  "nextQuestion": "The next interview question as a string, or null if the interview is complete"
 }
 
+Current status: ${questionsAsked} questions have been asked so far (including the opening question).
+${shouldEnd ? 'The interview has reached 10 questions. Return null to end the session.' : `Do NOT return null — the interview must continue. Ask question ${questionsAsked + 1}.`}
+
 Guidelines:
-- Act as the interviewer, not a coach
-- Ask natural, conversational interview questions
-- Questions should be based on the job description: ${session.jobTitle || 'the position'}
-- Use the candidate's CV/resume to ask relevant questions about their experience
-- Vary question difficulty: easy, medium, and hard questions
-- Ask about: technical skills, experience, problem-solving, teamwork, motivation, behavioral situations
-- Keep questions specific to the role and candidate's background
+- Sound like a real recruiter — natural, human, conversational
+- Acknowledge the candidate's answer briefly before asking the next question (e.g. "Great, thanks for sharing that." or "That's helpful to know.")
+- Ask about: experience, motivation, skills, teamwork, situational/behavioral scenarios, culture fit
+- Vary question types across the interview — don't repeat similar questions
 - Ask only ONE question per response
-- End interview after 8-10 questions total (return null)
 - Return ONLY valid JSON, no markdown, no explanations`;
 
     // Build conversation history (only questions and answers, not feedback)
-    const chat = session.chat || [];
     const recentMessages = chat
       .filter(msg => msg.type === 'question' || msg.type === 'answer')
-      .slice(-6); // Last 6 Q&A pairs for context
+      .slice(-8);
     const conversationHistory = recentMessages.map(msg =>
-      `${msg.type === 'question' ? 'Interviewer' : 'Candidate'}: ${msg.content}`
+      `${msg.type === 'question' ? 'Recruiter' : 'Candidate'}: ${msg.content}`
     ).join('\n');
 
     const jobDesc = session.jobDescription.substring(0, 1500);
@@ -502,12 +503,12 @@ Job Details:
 ${cvText ? `Candidate's CV/Resume:
 ${cvText.substring(0, 1500)}${cvText.length > 1500 ? '...' : ''}` : 'Note: No CV/resume provided. Ask general questions based on the job description.'}
 
-Conversation History (Questions Asked):
+Conversation so far:
 ${conversationHistory}
 
 Candidate's latest answer: "${userAnswer}"
 
-As the interviewer, ask the next relevant interview question based on the job requirements and their background. Do NOT provide feedback - just ask the next question.`;
+Ask the next interview question. Remember: ${shouldEnd ? 'return null to end the interview.' : `this is question ${questionsAsked + 1} — do NOT return null.`}`;
   }
 
   /**
@@ -593,11 +594,11 @@ As the interviewer, ask the next relevant interview question based on the job re
       currentPhase: 'introduction',
     };
 
-    // Start with the introduction question (as interviewer)
+    // Start with the introduction question (as recruiter)
     session.chat.push({
       id: 'intro',
       type: 'question',
-      content: `Hello! Thank you for coming in today. I'm excited to learn more about you. Can you tell me about yourself - your background, experience, and what interests you about the ${jobTitle || 'position'}?`,
+      content: `Hi, thanks for making time for this! I'm glad we could connect. I've had a chance to look over your application for the ${jobTitle || 'role'}${jobCompany ? ` at ${jobCompany}` : ''} — looks like an interesting background. To kick things off, could you tell me about yourself? Walk me through your experience and what's drawing you to this opportunity?`,
       timestamp: Date.now(),
     });
 

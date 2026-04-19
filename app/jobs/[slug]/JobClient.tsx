@@ -36,24 +36,25 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import AdUnit from '@/components/ads/AdUnit';
 
 // ─── Ad slot IDs ───────────────────────────────────────────────────────────────
+// Each slot used EXACTLY ONCE across the entire page — no duplicates.
 const AD_SLOTS = {
-  // Ad 1 — In-grid / below overview row (320x100 mobile, 728x90 desktop)
-  BANNER_TOP:       '6866736453',
-  // Ad 2 — Skill Gap Zone: between Skills and Responsibilities (native in-article)
-  IN_ARTICLE:       '5553654784',
-  // Ad 3 — Pre-Conversion: between Benefits and How to Apply (300x250)
-  BANNER_BOTTOM:    '4240573110',
-  // Ad 4 — Sidebar mobile in-flow (300x250)
-  SIDEBAR:          '9189647463',
-  // Ad 5 — Static anchor bar, mobile only (320x100)
-  ANCHOR_MOBILE:    '3349195672',
-  // Ad 6 — Sidebar top desktop: autorelaxed banner (fills available width)
-  SIDEBAR_BANNER:   '1143238075',
-  // Ad 7 — Sidebar bottom desktop: multiplex / related content unit
-  MULTIPLEX:        '8344942808',
+  // Ad 1 — After job overview row (display top, auto, full-width-responsive)
+  DISPLAY_TOP:        '4198231153',
+  // Ad 2 — After Skills / before Responsibilities (in-article fluid)
+  IN_ARTICLE_1:       '4690286797',
+  // Ad 3 — After Qualifications / before Benefits (in-article fluid)
+  IN_ARTICLE_2:       '8181708196',
+  // Ad 4 — Before How to Apply (display bottom, auto, full-width-responsive)
+  DISPLAY_BOTTOM:     '9751041788',
+  // Ad 5 — Sidebar mobile in-flow (in-feed fluid)
+  SIDEBAR_MOBILE:     '9025117620',
+  // Ad 6 — Mobile anchor bar (middle display, auto)
+  ANCHOR_MOBILE:      '9010641928',
+  // Ad 7 — Sidebar top desktop + mobile after Career Articles (display, auto)
+  JOBCLIENT_DISPLAY:  '1809021288',
+  // Ad 8 — Sidebar bottom desktop (display, auto)
+  MULTIPLEX:          '8344942808',
 } as const;
-
-const ANCHOR_HEIGHT = 100; // px — 320x100 large mobile banner
 
 const STORAGE_KEYS = {
   SAVED_JOBS: 'saved_jobs',
@@ -117,14 +118,13 @@ export default function JobClient({ job, relatedJobs, companies }: {
   const [upgradeErrorData, setUpgradeErrorData] = useState<any>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [similarJobs, setSimilarJobs] = useState<any[]>(relatedJobs || []);
-  const [companyJobs, setCompanyJobs] = useState<any[]>([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [showEmail, setShowEmail] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // New states for mobile anchor ad
+  // Mobile anchor ad state — starts at 100px, shrinks to 50px on close
   const [anchorHeight, setAnchorHeight] = useState(100);
   const [isAnchorClosed, setIsAnchorClosed] = useState(false);
 
@@ -618,23 +618,14 @@ export default function JobClient({ job, relatedJobs, companies }: {
                   </div>
                 </div>
 
-                <div className="mt-4 -mx-6 px-6">
-                  <div className="block sm:hidden">
-                    <AdUnit
-                      key={`${AD_SLOTS.BANNER_TOP}-mobile`}
-                      slot={AD_SLOTS.BANNER_TOP}
-                      format="auto"
-                      style={{ display: 'block', width: '320px', height: '100px', maxWidth: '100%', margin: '0 auto' }}
-                    />
-                  </div>
-                  <div className="hidden sm:block">
-                    <AdUnit
-                      key={`${AD_SLOTS.BANNER_TOP}-desktop`}
-                      slot={AD_SLOTS.BANNER_TOP}
-                      format="auto"
-                      style={{ display: 'block', width: '728px', height: '90px', maxWidth: '100%', margin: '0 auto' }}
-                    />
-                  </div>
+                <div className="mt-4 -mx-6 px-6" style={{ minHeight: '250px' }}>
+                  <AdUnit
+                    key={AD_SLOTS.DISPLAY_TOP}
+                    slot={AD_SLOTS.DISPLAY_TOP}
+                    format="auto"
+                    fullWidthResponsive={true}
+                    style={{ display: 'block', width: '100%', minHeight: '250px' }}
+                  />
                 </div>
 
                 {(job.sector || job.experience_level || job.deadline) && (
@@ -709,23 +700,13 @@ export default function JobClient({ job, relatedJobs, companies }: {
               )}
 
               <div className="w-full overflow-hidden">
-                <div className="block sm:hidden flex justify-center">
-                  <AdUnit
-                    key={`${AD_SLOTS.IN_ARTICLE}-mobile`}
-                    slot={AD_SLOTS.IN_ARTICLE}
-                    format="auto"
-                    style={{ display: 'block', width: '300px', height: '250px', maxWidth: '100%', margin: '0 auto' }}
-                  />
-                </div>
-                <div className="hidden sm:block">
-                  <AdUnit
-                    key={`${AD_SLOTS.IN_ARTICLE}-desktop`}
-                    slot={AD_SLOTS.IN_ARTICLE}
-                    format="fluid"
-                    layout="in-article"
-                    style={{ display: 'block', width: '100%' }}
-                  />
-                </div>
+                <AdUnit
+                  key={AD_SLOTS.IN_ARTICLE_1}
+                  slot={AD_SLOTS.IN_ARTICLE_1}
+                  format="fluid"
+                  layout="in-article"
+                  style={{ display: 'block', textAlign: 'center', width: '100%' }}
+                />
               </div>
 
               {(() => {
@@ -770,6 +751,17 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 return null;
               })()}
 
+              {/* In-article ad 2 — between Qualifications and Benefits */}
+              <div className="w-full overflow-hidden">
+                <AdUnit
+                  key={AD_SLOTS.IN_ARTICLE_2}
+                  slot={AD_SLOTS.IN_ARTICLE_2}
+                  format="fluid"
+                  layout="in-article"
+                  style={{ display: 'block', textAlign: 'center', width: '100%' }}
+                />
+              </div>
+
               {(() => {
                 const benefits = job.benefits || [];
                 const benefitsArray = Array.isArray(benefits) ? benefits : [];
@@ -791,24 +783,15 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 return null;
               })()}
 
-              {/* BANNER_BOTTOM — before How to Apply */}
-              <div className="w-full overflow-hidden">
-                <div className="block sm:hidden flex justify-center">
-                  <AdUnit
-                    key={`${AD_SLOTS.BANNER_BOTTOM}-mobile`}
-                    slot={AD_SLOTS.BANNER_BOTTOM}
-                    format="auto"
-                    style={{ display: 'block', width: '300px', height: '250px', maxWidth: '100%', margin: '0 auto' }}
-                  />
-                </div>
-                <div className="hidden sm:block">
-                  <AdUnit
-                    key={`${AD_SLOTS.BANNER_BOTTOM}-desktop`}
-                    slot={AD_SLOTS.BANNER_BOTTOM}
-                    format="auto"
-                    style={{ display: 'block', width: '728px', height: '90px', maxWidth: '100%', margin: '0 auto' }}
-                  />
-                </div>
+              {/* Display bottom — before How to Apply */}
+              <div className="w-full overflow-hidden" style={{ minHeight: '100px' }}>
+                <AdUnit
+                  key={AD_SLOTS.DISPLAY_BOTTOM}
+                  slot={AD_SLOTS.DISPLAY_BOTTOM}
+                  format="auto"
+                  fullWidthResponsive={true}
+                  style={{ display: 'block', width: '100%' }}
+                />
               </div>
 
               {/* How to Apply */}
@@ -1039,15 +1022,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 </div>
               )}
 
-              <div className="hidden lg:block w-full overflow-hidden">
-                <AdUnit
-                  key={`${AD_SLOTS.IN_ARTICLE}-after-date`}
-                  slot={AD_SLOTS.IN_ARTICLE}
-                  format="auto"
-                  style={{ display: 'block', width: '728px', height: '90px', maxWidth: '100%', margin: '0 auto' }}
-                />
-              </div>
-
               {!isExpired && (job.application_url || (job.application && (job.application.url || job.application.link))) && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <a
@@ -1066,16 +1040,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
 
             {/* RIGHT COLUMN — Sidebar */}
             <div className="lg:col-span-1 space-y-6">
-
-              {/* Sidebar top — autorelaxed banner, desktop only */}
-              <div className="hidden lg:block w-full rounded-lg overflow-hidden">
-                <AdUnit
-                  key={AD_SLOTS.SIDEBAR_BANNER}
-                  slot={AD_SLOTS.SIDEBAR_BANNER}
-                  format="autorelaxed"
-                  style={{ display: 'block' }}
-                />
-              </div>
 
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="px-5 py-4 font-semibold text-base flex items-center gap-2" 
@@ -1110,12 +1074,13 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 </div>
               </div>
 
-              <div className="flex lg:hidden w-full justify-center overflow-hidden">
+              <div className="flex lg:hidden w-full overflow-hidden">
                 <AdUnit
-                  key={`${AD_SLOTS.SIDEBAR}-mobile`}
-                  slot={AD_SLOTS.SIDEBAR}
-                  format="auto"
-                  style={{ display: 'block', width: '300px', height: '250px', maxWidth: '100%' }}
+                  key={AD_SLOTS.SIDEBAR_MOBILE}
+                  slot={AD_SLOTS.SIDEBAR_MOBILE}
+                  format="fluid"
+                  layoutKey="-fb+5w+4e-db+86"
+                  style={{ display: 'block', width: '100%' }}
                 />
               </div>
 
@@ -1254,13 +1219,25 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 </div>
               )}
 
+              {/* Display ad — after Career Articles on both mobile and desktop */}
+              <div className="w-full rounded-lg overflow-hidden" style={{ minHeight: '250px' }}>
+                <AdUnit
+                  key={AD_SLOTS.JOBCLIENT_DISPLAY}
+                  slot={AD_SLOTS.JOBCLIENT_DISPLAY}
+                  format="auto"
+                  fullWidthResponsive={true}
+                  style={{ display: 'block', width: '100%', minHeight: '250px' }}
+                />
+              </div>
+
               {/* Sidebar bottom — multiplex unit, desktop only, below Career Articles */}
-              <div className="hidden lg:block w-full rounded-lg overflow-hidden">
+              <div className="hidden lg:block w-full rounded-lg overflow-hidden" style={{ minHeight: '250px' }}>
                 <AdUnit
                   key={`${AD_SLOTS.MULTIPLEX}-sidebar`}
                   slot={AD_SLOTS.MULTIPLEX}
                   format="auto"
-                  style={{ display: 'block', width: '100%' }}
+                  fullWidthResponsive={true}
+                  style={{ display: 'block', width: '100%', minHeight: '250px' }}
                 />
               </div>
 
@@ -1268,13 +1245,12 @@ export default function JobClient({ job, relatedJobs, companies }: {
           </div>
         </div>
 
-        {/* Updated Mobile Anchor Ad with Close Button */}
+        {/* Mobile Anchor Ad with Close Button */}
         <div
           id="mobile-anchor-ad"
           className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300"
           style={{ height: `${anchorHeight}px` }}
         >
-          {/* Close Button */}
           <button
             onClick={handleCloseAnchorAd}
             className="absolute top-1.5 left-3 z-50 w-7 h-7 flex items-center justify-center bg-white rounded-full shadow text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
@@ -1282,22 +1258,13 @@ export default function JobClient({ job, relatedJobs, companies }: {
           >
             <X size={18} />
           </button>
-
-          {/* Ad Container */}
-          <div
-            className="w-full transition-all duration-300"
-            style={{ height: `${anchorHeight}px` }}
-          >
+          <div className="w-full transition-all duration-300" style={{ height: `${anchorHeight}px` }}>
             <AdUnit
               key={AD_SLOTS.ANCHOR_MOBILE}
               slot={AD_SLOTS.ANCHOR_MOBILE}
               format="auto"
-              style={{
-                display: 'block',
-                width: '100%',
-                height: `${anchorHeight}px`,
-                maxHeight: `${anchorHeight}px`,
-              }}
+              fullWidthResponsive={true}
+              style={{ display: 'block', width: '100%', height: `${anchorHeight}px`, maxHeight: `${anchorHeight}px` }}
             />
           </div>
         </div>

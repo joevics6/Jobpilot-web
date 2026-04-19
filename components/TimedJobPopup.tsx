@@ -1,0 +1,72 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { X, Zap, ArrowRight, CheckCircle } from 'lucide-react';
+
+const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+// Change this line
+const THREE_MINUTES_MS = 1 * 60 * 1000; // Now 1 minute
+
+interface TimedJobPopupProps {
+  forceShow?: boolean; // Used for the Job List logic
+}
+
+export default function TimedJobPopup({ forceShow = false }: TimedJobPopupProps) {
+  const [showPopup, setShowPopup] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !forceShow) return;
+
+    // 1. Frequency Check
+    const stored = localStorage.getItem('timed-popup-shown');
+    if (stored) {
+      if (Date.now() - parseInt(stored) < FIVE_DAYS_MS) return;
+    }
+
+    // 2. 3-Minute Timer
+    const timer = setTimeout(() => {
+      setShowPopup(true);
+    }, THREE_MINUTES_MS);
+
+    return () => clearTimeout(timer);
+  }, [forceShow]);
+
+  const handleClose = () => {
+    setShowPopup(false);
+    localStorage.setItem('timed-popup-shown', Date.now().toString());
+  };
+
+  if (!showPopup) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={handleClose} />
+      <div className="relative bg-white text-black rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-gray-200">
+        <button onClick={handleClose} className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-black text-white rounded-full">
+          <X size={16} />
+        </button>
+
+        <div className="pt-12 pb-8 px-8 text-center">
+          <div className="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl -rotate-6 transform">
+            <Zap className="w-8 h-8 fill-amber-400 text-amber-400" />
+          </div>
+          <h2 className="text-3xl font-black tracking-tighter leading-none mb-4 uppercase">Still <br /><span className="text-gray-400">Searching?</span></h2>
+          <p className="text-gray-600 text-sm leading-relaxed mb-8">
+            Stop scrolling and start interviewing. We’ll handle your Nigerian job applications while you focus on life.
+          </p>
+          <a href="/apply-for-me" className="flex items-center justify-center gap-3 w-full px-6 py-4 bg-black text-white rounded-2xl font-bold hover:bg-gray-900 transition-all group">
+            <span>Apply For Me</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </a>
+        </div>
+
+        <div className="bg-gray-50 border-t border-gray-100 py-4 px-8 flex items-center justify-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-500" />
+          <span className="text-[10px] font-bold uppercase tracking-tighter text-gray-400">
+            Exclusive to Nigerian Professionals
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

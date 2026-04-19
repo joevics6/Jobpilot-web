@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { User, Bell, LogOut, ChevronRight, Mail, Shield, HelpCircle, LogIn, Info, Trash2, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { User, Bell, LogOut, ChevronRight, Mail, Shield, HelpCircle, LogIn, Info, Trash2, RefreshCw, CheckCircle, AlertTriangle, Briefcase, Send, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ interface ProfileData {
 
 type BustStatus = 'idle' | 'loading' | 'success' | 'error';
 
-// ─── Keys that need to be cleared on all clients ──────────────────────────────
+
 const CLIENT_CACHE_KEYS = [
   'latest_jobs_cache',
   'latest_jobs_cache_ts',
@@ -43,8 +43,25 @@ export default function SettingsPage() {
   const [adminSecret, setAdminSecret] = useState('');
   const [showSecretInput, setShowSecretInput] = useState(false);
 
-  useEffect(() => { checkAuth(); }, []);
-  useEffect(() => { if (user) { loadProfileData(); loadSettings(); } }, [user]);
+  useEffect(() => {
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        // Force a full page reload so all state — profile, apply stage, etc — is fresh
+        window.location.reload();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadProfileData();
+      loadSettings();
+    }
+  }, [user]);
 
   const checkAuth = async () => {
     try {
@@ -71,6 +88,7 @@ export default function SettingsPage() {
       setIsAdmin(data?.role === 'admin');
     } catch (error) { console.error('Error loading profile:', error); }
   };
+
 
   const loadSettings = () => {
     if (typeof window === 'undefined' || !user) return;
@@ -114,7 +132,10 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     if (!user || !profileData) return;
     try {
-      const { error } = await supabase.from('profiles').upsert({ id: user.id, full_name: profileData.full_name, email: profileData.email, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      const { error } = await supabase.from('profiles').upsert(
+        { id: user.id, full_name: profileData.full_name, email: profileData.email, updated_at: new Date().toISOString() },
+        { onConflict: 'id' }
+      );
       if (error) throw error;
       if (profileData.email !== user.email) {
         const { error: updateError } = await supabase.auth.updateUser({ email: profileData.email });
@@ -127,34 +148,25 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Admin: clear all client caches locally + bust Redis via API ─────────────
   const handleAdminCacheBust = async () => {
     if (!adminSecret.trim()) { setBustMessage('Please enter the admin secret.'); return; }
     setBustStatus('loading');
     setBustMessage('');
-
     try {
-      // 1. Call the API to clear Redis
       const res = await fetch(`/api/jobs?action=bust_cache&admin_secret=${encodeURIComponent(adminSecret.trim())}`);
       const data = await res.json();
-
       if (!res.ok) {
         setBustStatus('error');
         setBustMessage(data.error || 'Failed to clear Redis cache. Check your secret.');
         return;
       }
-
-      // 2. Clear this browser's own localStorage/sessionStorage caches
       CLIENT_CACHE_KEYS.forEach(key => {
         try { localStorage.removeItem(key); } catch { }
         try { sessionStorage.removeItem(key); } catch { }
       });
-
-      // 3. Store the new version so other tabs/windows pick it up
       if (data.version) {
         try { localStorage.setItem('jobs_cache_bust_version', data.version); } catch { }
       }
-
       setBustStatus('success');
       setBustMessage(`Redis cleared ✓ · New version: ${data.version || 'n/a'} · All users will get fresh data on next load.`);
       setAdminSecret('');
@@ -166,7 +178,6 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Clear only this browser's local caches (anyone can do this) ─────────────
   const handleClearMyCache = () => {
     CLIENT_CACHE_KEYS.forEach(key => {
       try { localStorage.removeItem(key); } catch { }
@@ -189,6 +200,29 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  // ── Apply for Me links — always show all 3 to logged-in users ─────────────
+  // Each page guards itself: submit requires payment, dashboard requires submission
+  const applyLinks = [
+    {
+      href: '/apply-for-me',
+      icon: <Briefcase size={18} style={{ color: theme.colors.accent.gold }} />,
+      label: 'Apply for Me',
+      desc: 'Learn about the service and get started',
+    },
+    {
+      href: '/apply-for-me/submit',
+      icon: <Send size={18} style={{ color: theme.colors.accent.gold }} />,
+      label: 'Submit Your Details',
+      desc: 'Provide your Gmail and WhatsApp to activate',
+    },
+    {
+      href: '/apply-for-me/dashboard',
+      icon: <LayoutDashboard size={18} style={{ color: theme.colors.accent.gold }} />,
+      label: 'My Dashboard',
+      desc: 'Track jobs applied on your behalf',
+    },
+  ];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background.muted }}>
@@ -255,7 +289,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ── Admin Cache Control ── Only visible to admin users ──────────── */}
+        {/* Admin Cache Control */}
         {isAdmin && (
           <div className="mb-6">
             <h2 className="text-base font-semibold mb-2 px-1 flex items-center gap-2" style={{ color: '#DC2626' }}>
@@ -263,7 +297,6 @@ export default function SettingsPage() {
               Admin Cache Control
             </h2>
             <div className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
-              {/* Clear Redis + force all users to refetch */}
               <div className="p-5 border-b border-red-100">
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div>
@@ -277,7 +310,6 @@ export default function SettingsPage() {
                     REDIS
                   </span>
                 </div>
-
                 {!showSecretInput ? (
                   <button
                     onClick={() => { setShowSecretInput(true); setBustStatus('idle'); setBustMessage(''); }}
@@ -326,14 +358,12 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-
-              {/* Clear local cache only */}
               <div className="p-5">
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-0.5">Clear My Local Cache</h3>
                     <p className="text-xs text-gray-500">
-                      Clears only this browser's localStorage/sessionStorage job cache. 
+                      Clears only this browser's localStorage/sessionStorage job cache.
                       Does not affect Redis or other users.
                     </p>
                   </div>
@@ -350,6 +380,34 @@ export default function SettingsPage() {
                   Clear Local Cache
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Apply for Me — only shown to logged-in users ── */}
+        {user && (
+          <div className="mb-6">
+            <h2 className="text-base font-semibold mb-2 px-1 text-gray-700">Services</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              {applyLinks.map((link, i) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`flex items-center justify-between p-4 hover:bg-gray-50 transition-colors ${i < applyLinks.length - 1 ? 'border-b border-gray-100' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: theme.colors.accent.gold + '15' }}>
+                      {link.icon}
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-semibold text-gray-900">{link.label}</h3>
+                      <p className="text-xs text-gray-500">{link.desc}</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={20} className="text-gray-400" />
+                </Link>
+              ))}
             </div>
           </div>
         )}

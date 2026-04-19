@@ -43,8 +43,8 @@ export default function ToolsPage() {
     {
       id: 'cv-tools', title: 'CV Tools', description: 'Build and optimize your CV', icon: FileText, color: '#2563EB',
       tools: [
-        { id: 'cv-create', title: 'Create CV/Cover Letter', description: 'Build professional CVs and cover letters in minutes', icon: FileText, color: '#2563EB', route: '/cv' },
-        { id: 'keyword-checker', title: 'CV Keyword Checker', description: 'Check keyword match between your CV and job descriptions', icon: Search, color: '#10B981', route: '/tools/keyword-checker' },
+//        { id: 'cv-create', title: 'Create CV/Cover Letter', description: 'Build professional CVs and cover letters in minutes', icon: FileText, color: '#2563EB', route: '/cv' },
+//        { id: 'keyword-checker', title: 'CV Keyword Checker', description: 'Check keyword match between your CV and job descriptions', icon: Search, color: '#10B981', route: '/tools/keyword-checker' },
         { id: 'ats-review', title: 'ATS CV Review', description: 'Optimize your CV for ATS systems and job matching', icon: FileCheck, color: '#8B5CF6', route: '/tools/ats-review' },
       ],
     },
@@ -60,7 +60,7 @@ export default function ToolsPage() {
     {
       id: 'safety-tools', title: 'Safety Tools', description: 'Stay safe from job scams', icon: Shield, color: '#EF4444',
       tools: [
-        { id: 'scam-detector', title: 'Job Description Analyzer', description: 'AI-powered analysis to detect job scams in any text', icon: Shield, color: '#EF4444', route: '/tools/scam-detector' },
+//        { id: 'scam-detector', title: 'Job Description Analyzer', description: 'AI-powered analysis to detect job scams in any text', icon: Shield, color: '#EF4444', route: '/tools/scam-detector' },
         { id: 'scam-checker', title: 'Job Scam Checker', description: 'Search and report fraudulent companies and recruiters', icon: Shield, color: '#DC2626', route: '/tools/scam-checker' },
       ],
     },

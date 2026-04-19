@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { mapJobToSchema } from '@/lib/mapJobToSchema';
 import JobClient from './JobClient';
+import TimedJobPopup from '@/components/TimedJobPopup';
 import { Metadata } from 'next';
 import { cache } from 'react';
 
@@ -42,95 +43,39 @@ const getRelatedJobs = cache(async (currentJob: any) => {
   let relatedJobs: any[] = [];
   const MAX_JOBS = 10;
 
-  if (currentJob.category) {
-    const { data: categoryJobs } = await supabase
+  const { data } = await supabase
+    .from('jobs')
+    .select('id, title, company, location, category, slug, status, deadline, created_at')
+    .eq('category', currentJob.category)
+    .neq('id', currentJob.id)
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(MAX_JOBS);
+
+  if (data) relatedJobs = data;
+
+  if (relatedJobs.length < MAX_JOBS) {
+    const { data: moreJobs } = await supabase
       .from('jobs')
-      .select('id, slug, title, company, location, salary_range, posted_date, created_at, category, sector')
-      .eq('category', currentJob.category)
-      .eq('status', 'active')
+      .select('id, title, company, location, category, slug, status, deadline, created_at')
       .neq('id', currentJob.id)
-      .or(`posted_date.gte.${thirtyDaysAgo.toISOString().split('T')[0]},created_at.gte.${thirtyDaysAgo.toISOString()}`)
+      .not('id', 'in', `(${relatedJobs.map(j => j.id).join(',') || '0'})`)
       .order('created_at', { ascending: false })
-      .limit(8);
-    if (categoryJobs) relatedJobs = categoryJobs;
+      .limit(MAX_JOBS - relatedJobs.length);
+    
+    if (moreJobs) relatedJobs = [...relatedJobs, ...moreJobs];
   }
 
-  if (relatedJobs.length < MAX_JOBS && currentJob.sector) {
-    const excludeIds = [currentJob.id, ...relatedJobs.map(job => job.id)];
-    const remainingSlots = MAX_JOBS - relatedJobs.length;
-
-    const { data: sectorJobs } = await supabase
-      .from('jobs')
-      .select('id, slug, title, company, location, salary_range, posted_date, created_at, category, sector')
-      .eq('sector', currentJob.sector)
-      .eq('status', 'active')
-      .neq('id', currentJob.id)
-      .not('id', 'in', `(${excludeIds.join(',')})`)
-      .or(`posted_date.gte.${thirtyDaysAgo.toISOString().split('T')[0]},created_at.gte.${thirtyDaysAgo.toISOString()}`)
-      .order('created_at', { ascending: false })
-      .limit(remainingSlots);
-    if (sectorJobs) relatedJobs = [...relatedJobs, ...sectorJobs];
-  }
-
-  return relatedJobs.slice(0, MAX_JOBS);
+  return relatedJobs;
 });
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const job = await getJob(params.slug);
-  
-  if (!job) {
-    return {
-      title: 'Job Not Found - JobMeter',
-      description: 'The job you are looking for could not be found. Browse more jobs on JobMeter.',
-    };
-  }
+  if (!job) return { title: 'Job Not Found' };
 
-  const companyName = typeof job.company === 'string' 
-    ? job.company 
-    : (job.company?.name || 'Company');
-
-  const isConfidential = companyName === 'Confidential Employer';
-
-  const locationStr = typeof job.location === 'string'
-    ? job.location
-    : (job.location?.remote 
-        ? 'Remote'
-        : [job.location?.city, job.location?.state, job.location?.country].filter(Boolean).join(', ') || 'Not specified');
-
-  const getSalaryString = () => {
-    if (job.salary_abbreviation) return job.salary_abbreviation;
-    if (job.salary) return job.salary;
-    if (job.salary_range && typeof job.salary_range === 'object') {
-      const { min, max, currency } = job.salary_range;
-      if (currency && (min || max)) {
-        if (min && max) return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}`;
-        if (min) return `${currency} ${min.toLocaleString()}`;
-        if (max) return `${currency} ${max.toLocaleString()}`;
-      }
-    }
-    return null;
-  };
-
-  const salaryStr = getSalaryString();
-  const jobTitle = job.title || 'Job Opportunity';
-
-  let titleCore = isConfidential
-    ? `${jobTitle} in ${locationStr}`
-    : `${jobTitle} at ${companyName} in ${locationStr}`;
-
-  if (titleCore.length > 60) titleCore = titleCore.substring(0, 60).trim();
-
-  let description = isConfidential
-    ? `Apply for ${jobTitle} in ${locationStr}`
-    : `Apply for ${jobTitle} at ${companyName} in ${locationStr}`;
-
-  if (salaryStr) description += `. Salary: ${salaryStr}`;
-  if (job.employment_type) description += `. ${job.employment_type}`;
-  if (job.sector) description += ` ${job.sector} role.`;
-  description += ' Apply now on JobMeter.';
-
-  if (description.length > 155) description = description.substring(0, 152).trim() + '...';
-
+  const companyName = typeof job.company === 'string' ? job.company : job.company?.name || 'Company';
+  const titleCore = `${job.title} at ${companyName}`;
+  const description = job.description?.replace(/<[^>]*>/g, '').slice(0, 160) || '';
   const isNoIndex = job.status === 'expired';
 
   return {
@@ -161,6 +106,15 @@ export default async function JobPage({ params }: { params: { slug: string } }) 
   const job = await getJob(params.slug);
   if (!job) notFound();
 
+  // ── FIXED LINE 185 (Safety check for Array vs String) ───────────────────
+  const countryValue = Array.isArray(job.country) ? job.country[0] : job.country;
+
+  const isNigerianJob = 
+    job.location?.country?.toLowerCase() === 'nigeria' || 
+    (typeof countryValue === 'string' && countryValue.toLowerCase() === 'nigeria') ||
+    (typeof job.location === 'string' && job.location.toLowerCase().includes('nigeria'));
+  // ───────────────────────────────────────────────────────────────────────
+
   const companies = await getCompanies();
   const relatedJobs = await getRelatedJobs(job);
   const schema = mapJobToSchema(job);
@@ -171,11 +125,14 @@ export default async function JobPage({ params }: { params: { slug: string } }) 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
+      
       <JobClient 
         job={job} 
         relatedJobs={relatedJobs} 
         companies={companies} 
       />
+
+      <TimedJobPopup />
     </>
   );
 }

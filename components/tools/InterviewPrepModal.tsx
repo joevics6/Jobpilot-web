@@ -9,6 +9,9 @@ import { InterviewPrepService } from '@/lib/services/interviewPrepService';
 import { theme } from '@/lib/theme';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useCredits } from '@/context/CreditContext';
+import { ApplyPaymentModal } from '@/components/payment/ApplyPaymentModal';
+import AuthModal from '@/components/AuthModal';
 
 interface Job {
   id: string;
@@ -37,6 +40,8 @@ interface InterviewPrepModalProps {
 
 export default function InterviewPrepModal({ isOpen, onClose }: InterviewPrepModalProps) {
   const router = useRouter();
+  const { deductCredit } = useCredits();
+
   const [step, setStep] = useState<Step>('job-selection');
   const [loading, setLoading] = useState(false);
 
@@ -55,6 +60,10 @@ export default function InterviewPrepModal({ isOpen, onClose }: InterviewPrepMod
   const [cvSearchQuery, setCvSearchQuery] = useState('');
   const [selectedCV, setSelectedCV] = useState<CVDocument | null>(null);
   const [pastedCVContent, setPastedCVContent] = useState('');
+
+  // Modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Reset modal state when opened
   useEffect(() => {
@@ -268,6 +277,20 @@ export default function InterviewPrepModal({ isOpen, onClose }: InterviewPrepMod
   const handleGenerateQuestions = async () => {
     if (!selectedJob) return;
 
+    // 1. Check Auth
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    // 2. Check/Deduct Credit
+    const result = await deductCredit(1);
+    if (!result.success) {
+      setShowPaymentModal(true);
+      return;
+    }
+
     setLoading(true);
     setStep('generating');
 
@@ -278,7 +301,6 @@ export default function InterviewPrepModal({ isOpen, onClose }: InterviewPrepMod
         if (selectedCV.html_content) {
           cvContent = selectedCV.html_content;
         } else if (selectedCV.structured_data) {
-          // Convert structured data to text
           const data = selectedCV.structured_data;
           cvContent = JSON.stringify(data);
         }
@@ -300,9 +322,14 @@ export default function InterviewPrepModal({ isOpen, onClose }: InterviewPrepMod
 
       InterviewPrepService.saveSession(newSession);
 
-      // Navigate to session page
-      onClose();
+      // FIXED REDIRECT - Push first, then close modal
       router.push(`/tools/interview/${newSession.id}`);
+      
+      // Close modal after navigation starts (prevents race condition)
+      setTimeout(() => {
+        onClose();
+      }, 150);
+
     } catch (error: any) {
       console.error('Error generating questions:', error);
       alert(error.message || 'Failed to generate questions. Please try again.');
@@ -311,232 +338,241 @@ export default function InterviewPrepModal({ isOpen, onClose }: InterviewPrepMod
       setLoading(false);
     }
   };
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-        <DialogTitle className="sr-only">Interview Preparation</DialogTitle>
-        <DialogDescription className="sr-only">Prepare for job interviews by selecting a job and optionally providing your CV</DialogDescription>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Interview Preparation</DialogTitle>
+          <DialogDescription className="sr-only">Prepare for job interviews by selecting a job and optionally providing your CV</DialogDescription>
 
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Interview Preparation</h2>
-            <div className="flex items-center gap-2 mt-2">
-              <div className={`w-2 h-2 rounded-full ${step === 'job-selection' ? 'bg-blue-500' : step === 'cv-selection' ? 'bg-yellow-500' : 'bg-gray-300'}`}></div>
-              <span className="text-sm text-gray-600">
-                {step === 'job-selection' ? 'Select Job' : step === 'cv-selection' ? 'Optional CV' : 'Generating Questions'}
-              </span>
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Interview Preparation</h2>
+              <div className="flex items-center gap-2 mt-2">
+                <div className={`w-2 h-2 rounded-full ${step === 'job-selection' ? 'bg-blue-500' : step === 'cv-selection' ? 'bg-yellow-500' : 'bg-gray-300'}`}></div>
+                <span className="text-sm text-gray-600">
+                  {step === 'job-selection' ? 'Select Job' : step === 'cv-selection' ? 'Optional CV' : 'Generating Questions'}
+                </span>
+              </div>
             </div>
+            <button
+              onClick={handleClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X size={20} className="text-gray-500" />
+            </button>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X size={20} className="text-gray-500" />
-          </button>
-        </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {step === 'job-selection' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Choose a Job to Prepare For</h3>
-                <p className="text-gray-600 mb-4">Select a job from your saved jobs or paste a job description.</p>
+          {/* Content */}
+          <div className="p-6">
+            {step === 'job-selection' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Choose a Job to Prepare For</h3>
+                  <p className="text-gray-600 mb-4">Select a job from your saved jobs or paste a job description.</p>
 
-                {!jobSelectionMethod && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                      onClick={() => setJobSelectionMethod('select')}
-                      className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                    >
-                      <Briefcase className="mx-auto mb-2 text-gray-400" size={24} />
-                      <div className="font-medium text-gray-900">Select from Saved Jobs</div>
-                      <div className="text-sm text-gray-500">Choose from your previously saved jobs</div>
-                    </button>
-                    <button
-                      onClick={() => setJobSelectionMethod('paste')}
-                      className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                    >
-                      <FileText className="mx-auto mb-2 text-gray-400" size={24} />
-                      <div className="font-medium text-gray-900">Paste Job Description</div>
-                      <div className="text-sm text-gray-500">Copy and paste a job posting</div>
-                    </button>
-                  </div>
-                )}
+                  {!jobSelectionMethod && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        onClick={() => setJobSelectionMethod('select')}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                      >
+                        <Briefcase className="mx-auto mb-2 text-gray-400" size={24} />
+                        <div className="font-medium text-gray-900">Select from Saved Jobs</div>
+                        <div className="text-sm text-gray-500">Choose from your previously saved jobs</div>
+                      </button>
+                      <button
+                        onClick={() => setJobSelectionMethod('paste')}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                      >
+                        <FileText className="mx-auto mb-2 text-gray-400" size={24} />
+                        <div className="font-medium text-gray-900">Paste Job Description</div>
+                        <div className="text-sm text-gray-500">Copy and paste a job posting</div>
+                      </button>
+                    </div>
+                  )}
 
-                {jobSelectionMethod === 'select' && (
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                      <input
-                        type="text"
-                        placeholder="Search jobs..."
-                        value={jobSearchQuery}
-                        onChange={(e) => setJobSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  {jobSelectionMethod === 'select' && (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                          type="text"
+                          placeholder="Search jobs..."
+                          value={jobSearchQuery}
+                          onChange={(e) => setJobSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+                        {filteredJobs.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">
+                            {jobs.length === 0 ? 'No saved jobs found. Try pasting a job description instead.' : 'No jobs match your search.'}
+                          </div>
+                        ) : (
+                          filteredJobs.map((job) => (
+                            <button
+                              key={job.id}
+                              onClick={() => handleJobSelect(job)}
+                              className="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{job.title}</div>
+                              <div className="text-sm text-gray-600">{job.company} • {job.location}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setJobSelectionMethod(null)}>Back</Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {jobSelectionMethod === 'paste' && (
+                    <div className="space-y-4">
+                      <Textarea
+                        placeholder="Paste the job description here..."
+                        value={pastedJobDescription}
+                        onChange={(e) => setPastedJobDescription(e.target.value)}
+                        className="min-h-[200px]"
                       />
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setJobSelectionMethod(null)}>Back</Button>
+                        <Button onClick={handlePasteJob} disabled={!pastedJobDescription.trim()}>
+                          Continue
+                        </Button>
+                      </div>
                     </div>
-                    <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
-                      {filteredJobs.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          {jobs.length === 0 ? 'No saved jobs found. Try pasting a job description instead.' : 'No jobs match your search.'}
-                        </div>
-                      ) : (
-                        filteredJobs.map((job) => (
-                          <button
-                            key={job.id}
-                            onClick={() => handleJobSelect(job)}
-                            className="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0"
-                          >
-                            <div className="font-medium text-gray-900">{job.title}</div>
-                            <div className="text-sm text-gray-600">{job.company} • {job.location}</div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setJobSelectionMethod(null)}>Back</Button>
-                    </div>
-                  </div>
-                )}
-
-                {jobSelectionMethod === 'paste' && (
-                  <div className="space-y-4">
-                    <Textarea
-                      placeholder="Paste the job description here..."
-                      value={pastedJobDescription}
-                      onChange={(e) => setPastedJobDescription(e.target.value)}
-                      className="min-h-[200px]"
-                    />
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setJobSelectionMethod(null)}>Back</Button>
-                      <Button onClick={handlePasteJob} disabled={!pastedJobDescription.trim()}>
-                        Continue
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {step === 'cv-selection' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Optional: Add Your CV</h3>
-                <p className="text-gray-600 mb-4">Including your CV helps generate more personalized questions.</p>
+            {step === 'cv-selection' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Optional: Add Your CV</h3>
+                  <p className="text-gray-600 mb-4">Including your CV helps generate more personalized questions.</p>
 
-                {!cvSelectionMethod && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                      onClick={() => setCvSelectionMethod('select')}
-                      className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                    >
-                      <FileText className="mx-auto mb-2 text-gray-400" size={24} />
-                      <div className="font-medium text-gray-900">Select CV</div>
-                      <div className="text-sm text-gray-500">Choose from saved CVs</div>
-                    </button>
-                    <button
-                      onClick={() => setCvSelectionMethod('paste')}
-                      className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                    >
-                      <FileText className="mx-auto mb-2 text-gray-400" size={24} />
-                      <div className="font-medium text-gray-900">Paste CV</div>
-                      <div className="text-sm text-gray-500">Copy and paste CV content</div>
-                    </button>
-                    <button
-                      onClick={handleSkipCV}
-                      className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-                    >
-                      <Check className="mx-auto mb-2 text-gray-400" size={24} />
-                      <div className="font-medium text-gray-900">Skip</div>
-                      <div className="text-sm text-gray-500">Continue without CV</div>
-                    </button>
-                  </div>
-                )}
+                  {!cvSelectionMethod && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <button
+                        onClick={() => setCvSelectionMethod('select')}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                      >
+                        <FileText className="mx-auto mb-2 text-gray-400" size={24} />
+                        <div className="font-medium text-gray-900">Select CV</div>
+                        <div className="text-sm text-gray-500">Choose from saved CVs</div>
+                      </button>
+                      <button
+                        onClick={() => setCvSelectionMethod('paste')}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                      >
+                        <FileText className="mx-auto mb-2 text-gray-400" size={24} />
+                        <div className="font-medium text-gray-900">Paste CV</div>
+                        <div className="text-sm text-gray-500">Copy and paste CV content</div>
+                      </button>
+                      <button
+                        onClick={handleSkipCV}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                      >
+                        <Check className="mx-auto mb-2 text-gray-400" size={24} />
+                        <div className="font-medium text-gray-900">Skip</div>
+                        <div className="text-sm text-gray-500">Continue without CV</div>
+                      </button>
+                    </div>
+                  )}
 
-                {cvSelectionMethod === 'select' && (
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                      <input
-                        type="text"
-                        placeholder="Search CVs..."
-                        value={cvSearchQuery}
-                        onChange={(e) => setCvSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  {cvSelectionMethod === 'select' && (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                          type="text"
+                          placeholder="Search CVs..."
+                          value={cvSearchQuery}
+                          onChange={(e) => setCvSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+                        {filteredCVDocuments.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">
+                            {cvDocuments.length === 0 ? 'No saved CVs found. Try pasting CV content instead.' : 'No CVs match your search.'}
+                          </div>
+                        ) : (
+                          filteredCVDocuments.map((cv) => (
+                            <button
+                              key={cv.id}
+                              onClick={() => {
+                                setSelectedCV(cv);
+                                setCvSelectionMethod(null);
+                                handleGenerateQuestions();
+                              }}
+                              className="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{cv.name}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setCvSelectionMethod(null)}>Back</Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {cvSelectionMethod === 'paste' && (
+                    <div className="space-y-4">
+                      <Textarea
+                        placeholder="Paste your CV content here..."
+                        value={pastedCVContent}
+                        onChange={(e) => setPastedCVContent(e.target.value)}
+                        className="min-h-[200px]"
                       />
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setCvSelectionMethod(null)}>Back</Button>
+                        <Button onClick={() => {
+                          if (!pastedCVContent.trim()) {
+                            alert('Please paste your CV content');
+                            return;
+                          }
+                          setSelectedCV({
+                            id: 'pasted',
+                            name: 'Pasted CV',
+                            pasted_text: pastedCVContent,
+                          });
+                          setCvSelectionMethod(null);
+                          handleGenerateQuestions();
+                        }} disabled={!pastedCVContent.trim()}>
+                          Continue
+                        </Button>
+                      </div>
                     </div>
-                    <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
-                      {filteredCVDocuments.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          {cvDocuments.length === 0 ? 'No saved CVs found. Try pasting CV content instead.' : 'No CVs match your search.'}
-                        </div>
-                      ) : (
-                        filteredCVDocuments.map((cv) => (
-                          <button
-                            key={cv.id}
-                            onClick={() => {
-                              setSelectedCV(cv);
-                              setCvSelectionMethod(null);
-                              handleGenerateQuestions();
-                            }}
-                            className="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0"
-                          >
-                            <div className="font-medium text-gray-900">{cv.name}</div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setCvSelectionMethod(null)}>Back</Button>
-                    </div>
-                  </div>
-                )}
-
-                {cvSelectionMethod === 'paste' && (
-                  <div className="space-y-4">
-                    <Textarea
-                      placeholder="Paste your CV content here..."
-                      value={pastedCVContent}
-                      onChange={(e) => setPastedCVContent(e.target.value)}
-                      className="min-h-[200px]"
-                    />
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setCvSelectionMethod(null)}>Back</Button>
-                      <Button onClick={() => {
-                        if (!pastedCVContent.trim()) {
-                          alert('Please paste your CV content');
-                          return;
-                        }
-                        setSelectedCV({
-                          id: 'pasted',
-                          name: 'Pasted CV',
-                          pasted_text: pastedCVContent,
-                        });
-                        setCvSelectionMethod(null);
-                        handleGenerateQuestions();
-                      }} disabled={!pastedCVContent.trim()}>
-                        Continue
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {step === 'generating' && (
-            <div className="text-center py-12">
-              <Loader2 className="mx-auto mb-4 animate-spin text-blue-500" size={48} />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Interview Questions</h3>
-              <p className="text-gray-600">Please wait while we create personalized questions for your interview preparation...</p>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            {step === 'generating' && (
+              <div className="text-center py-12">
+                <Loader2 className="mx-auto mb-4 animate-spin text-blue-500" size={48} />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Interview Questions</h3>
+                <p className="text-gray-600">Please wait while we create personalized questions for your interview preparation...</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auth & Payment Modals */}
+      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+      <ApplyPaymentModal
+        open={showPaymentModal}
+        onOpenChange={setShowPaymentModal}
+        onAuthRequired={() => setShowAuthModal(true)}
+      />
+    </>
   );
 }

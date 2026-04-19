@@ -45,7 +45,7 @@ const STORAGE_KEYS = {
   MATCHES_CACHE_USER: 'jobs_cache_user_id',
 };
 
-const JOBS_PER_PAGE_DISPLAY = 25;
+const JOBS_PER_PAGE_DISPLAY = 50;
 const CLIENT_CACHE_DURATION = 20 * 60 * 1000; // 20 min — expires before Redis 30 min
 
 interface JobListProps {

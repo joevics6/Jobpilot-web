@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { InterviewPrepService, InterviewSession, ChatMessage } from '@/lib/services/interviewPrepService';
 import { SpeechUtils } from '@/lib/utils/speechUtils';
 import { theme } from '@/lib/theme';
+import { supabase } from '@/lib/supabase';
 
 export default function InterviewSessionPage() {
   const params = useParams();
@@ -23,6 +24,8 @@ export default function InterviewSessionPage() {
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     loadSession();
@@ -81,7 +84,7 @@ export default function InterviewSessionPage() {
       console.error('Error playing question:', error);
     } finally {
       setIsPlaying(false);
-      // Auto-start STT after TTS finishes
+      // Auto-start recording after TTS finishes
       if (autoMode) {
         startRecording();
       }
@@ -90,54 +93,204 @@ export default function InterviewSessionPage() {
 
   const startRecording = async () => {
     try {
-      setIsRecording(true);
-      const success = SpeechUtils.startListening(
-        (result) => {
-          // Extract transcript from SpeechRecognitionResult object
-          const transcript = result.transcript || '';
-          if (transcript) {
-            if (result.isFinal) {
-              // Final result: append to existing input
-              setUserInput(prev => {
-                const trimmed = transcript.trim();
-                return prev ? prev + ' ' + trimmed : trimmed;
-              });
-            } else {
-              // Interim result: replace the last interim part
-              setUserInput(prev => {
-                // Keep only the final parts, add new interim
-                const finalParts = prev.split(/\s+/).filter((_, i, arr) => i < arr.length - 1 || !prev.endsWith(' '));
-                return finalParts.join(' ') + (finalParts.length > 0 ? ' ' : '') + transcript;
-              });
-            }
-          }
-        },
-        (error) => {
-          console.error('Speech recognition error:', error);
-          alert(error);
-          setIsRecording(false);
-        },
-        () => {
-          // On end callback
-          setIsRecording(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
         }
-      );
-      
-      if (!success) {
-        setIsRecording(false);
-      }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
-      setIsRecording(false);
+      alert('Could not access microphone. Please check permissions.');
     }
   };
 
-  const stopRecording = async () => {
-    try {
-      await SpeechUtils.stopListening();
+  const stopRecording = () => {
+    const mediaRecorder = mediaRecorderRef.current;
+    if (!mediaRecorder) return;
+
+    mediaRecorder.onstop = async () => {
+      const mimeType = mediaRecorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+
+      // Stop all tracks to release mic
+      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+
       setIsRecording(false);
-    } catch (error) {
-      console.error('Error stopping recording:', error);
+      await sendAudioMessage(audioBlob, mimeType);
+    };
+
+    mediaRecorder.stop();
+  };
+
+  const sendAudioMessage = async (audioBlob: Blob, mimeType: string) => {
+    if (!session || isWaitingForResponse) return;
+
+    setIsWaitingForResponse(true);
+
+    // Convert blob to base64
+    const base64Audio = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Strip the data URL prefix
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(audioBlob);
+    });
+
+    // Get last question for context
+    const chat = session.chat || [];
+    const lastQuestion = chat.filter(msg => msg.type === 'question').pop();
+
+    // Extract CV if available
+    let cvText = '';
+    if (session.cvUsed) {
+      try {
+        const cvDocs = localStorage.getItem('cv_documents');
+        if (cvDocs) {
+          const docs = JSON.parse(cvDocs);
+          const latestCV = docs.find((doc: any) => doc.type === 'cv');
+          if (latestCV) {
+            cvText = InterviewPrepService.extractCVText(latestCV.content || latestCV.structured_data || '');
+          }
+        }
+      } catch (e) {
+        console.error('Error extracting CV:', e);
+      }
+    }
+
+    // Build conversation history for next question prompt
+    const recentMessages = chat
+      .filter(msg => msg.type === 'question' || msg.type === 'answer')
+      .slice(-6)
+      .map(msg => `${msg.type === 'question' ? 'Interviewer' : 'Candidate'}: ${msg.content}`)
+      .join('\n');
+
+    const questionNumber = chat.filter(msg => msg.type === 'question').length;
+    const jobDesc = session.jobDescription.substring(0, 1000);
+
+    // Single combined prompt: transcribe audio + evaluate + get next question
+    const combinedPrompt = `The attached audio is the candidate's spoken answer to an interview question. 
+
+STEP 1 - TRANSCRIBE: First, transcribe the spoken audio exactly.
+
+STEP 2 - EVALUATE: As an AI interview coach, evaluate the answer.
+
+STEP 3 - NEXT QUESTION: As the interviewer, ask the next question (or return null if ${questionNumber} questions have been asked and the interview should end after 8-10 questions).
+
+Job Details:
+- Title: ${session.jobTitle || 'Not specified'}
+- Company: ${session.jobCompany || 'Not specified'}
+- Description: ${jobDesc}${session.jobDescription.length > 1000 ? '...' : ''}
+
+${cvText ? `Candidate CV:\n${cvText}\n` : ''}
+
+Current interview question (Question ${questionNumber} of ~10):
+"${lastQuestion?.content || ''}"
+
+Conversation so far:
+${recentMessages}
+
+${cvText ? '' : 'Note: No CV provided.'}
+
+Respond with ONLY valid JSON in this exact structure:
+{
+  "transcript": "exact transcription of what the candidate said",
+  "score": 85,
+  "feedback": "Brief coaching feedback (50-70 words max) - what was good and what needs improvement",
+  "nextQuestion": "The next interview question as the interviewer, or null if interview should end"
+}
+
+Rules:
+- score: 0-100 (excellent 80-100, good 60-79, average 40-59, needs work 20-39, poor 0-19)
+- feedback: 50-70 words max, concise and constructive
+- nextQuestion: null only after 8-10 questions total
+- Return ONLY valid JSON, no markdown, no code blocks`;
+
+    try {
+      // Step 1: Invoke edge function with audio
+      const { data, error } = await supabase.functions.invoke('interview-prep', {
+        body: {
+          prompt: combinedPrompt,
+          temperature: 0.7,
+          maxTokens: 1024,
+          audioData: base64Audio,
+          mimeType,
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Failed to process audio');
+
+      // Step 2: Parse combined response
+      const result = InterviewPrepService.parseAIResponse<{
+        transcript: string;
+        score: number;
+        feedback: string;
+        nextQuestion: string | null;
+      }>(data.data);
+
+      // Step 3: Add user answer message (with transcript as content)
+      const userMessage: ChatMessage = {
+        id: `user_${Date.now()}`,
+        type: 'answer',
+        content: result.transcript,
+        timestamp: Date.now(),
+      };
+
+      // Step 4: Add feedback message
+      const feedbackMessage: ChatMessage = {
+        id: `feedback_${Date.now()}`,
+        type: 'feedback',
+        content: result.feedback,
+        timestamp: Date.now(),
+        score: result.score,
+      };
+
+      // Step 5: Build updated session
+      const updatedChat = [...chat, userMessage, feedbackMessage];
+
+      if (result.nextQuestion) {
+        updatedChat.push({
+          id: `question_${Date.now()}`,
+          type: 'question',
+          content: result.nextQuestion,
+          timestamp: Date.now(),
+        });
+      }
+
+      const updatedSession = {
+        ...session,
+        chat: updatedChat,
+        completed: !result.nextQuestion,
+        currentPhase: result.nextQuestion ? 'questioning' : 'completed',
+      } as InterviewSession;
+
+      setSession(updatedSession);
+      InterviewPrepService.saveSession(updatedSession);
+
+    } catch (error: any) {
+      console.error('Error processing audio:', error);
+
+      const errorMessage: ChatMessage = {
+        id: `error_${Date.now()}`,
+        type: 'feedback',
+        content: 'Sorry, I encountered an error processing your audio. Please try again or type your answer.',
+        timestamp: Date.now(),
+      };
+
+      setSession(prev => prev ? { ...prev, chat: [...(prev.chat || []), errorMessage] } : prev);
+    } finally {
+      setIsWaitingForResponse(false);
     }
   };
 
@@ -176,11 +329,6 @@ export default function InterviewSessionPage() {
     setSession(updatedSession);
     setUserInput('');
     setIsWaitingForResponse(true);
-
-    // Stop recording if active
-    if (isRecording) {
-      stopRecording();
-    }
 
     try {
       const response = await InterviewPrepService.processChatResponse(updatedSession, userMessage.content);
@@ -392,22 +540,31 @@ export default function InterviewSessionPage() {
           {!session.completed && (
             <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white z-20">
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Textbox - Above buttons */}
-                <div className="py-3">
-                  <textarea
-                    ref={inputRef}
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your answer here... (Press Enter to send)"
-                    className="w-full min-h-[80px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    disabled={isWaitingForResponse}
-                  />
-                  <div className="mt-1 text-xs text-gray-500 flex items-center justify-between">
-                    <span>Press Enter to send • Auto mode: {autoMode ? 'TTS → STT' : 'Manual control'}</span>
-                    {isRecording && <span className="text-red-600 animate-pulse">● Recording...</span>}
+                {/* Textbox - hidden while recording */}
+                {!isRecording && (
+                  <div className="py-3">
+                    <textarea
+                      ref={inputRef}
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type your answer here... (Press Enter to send)"
+                      className="w-full min-h-[80px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      disabled={isWaitingForResponse}
+                    />
+                    <div className="mt-1 text-xs text-gray-500 flex items-center justify-between">
+                      <span>Press Enter to send • Auto mode: {autoMode ? 'TTS → Record' : 'Manual control'}</span>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Recording indicator */}
+                {isRecording && (
+                  <div className="py-3 flex items-center gap-3">
+                    <span className="text-red-600 animate-pulse text-sm font-medium">● Recording... Click Stop when done</span>
+                  </div>
+                )}
+
                 {/* Buttons - Horizontal line */}
                 <div className="pb-4 flex items-center gap-3">
                   <button
@@ -425,19 +582,20 @@ export default function InterviewSessionPage() {
                   </button>
                   <button
                     onClick={toggleRecording}
+                    disabled={isWaitingForResponse || (!isRecording && userInput.trim().length > 0)}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg transition-colors ${
                       isRecording
                         ? 'bg-red-600 text-white hover:bg-red-700'
                         : 'bg-gray-600 text-white hover:bg-gray-700'
-                    }`}
-                    title={isRecording ? 'Stop recording' : 'Start voice input'}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title={isRecording ? 'Stop recording and send' : userInput.trim() ? 'Clear text to use recording' : 'Start voice input'}
                   >
                     {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
                     <span className="text-sm font-medium">{isRecording ? 'Stop' : 'Record'}</span>
                   </button>
                   <button
                     onClick={sendMessage}
-                    disabled={!userInput.trim() || isWaitingForResponse}
+                    disabled={!userInput.trim() || isWaitingForResponse || isRecording}
                     className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title="Send message"
                   >

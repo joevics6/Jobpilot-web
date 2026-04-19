@@ -1,17 +1,15 @@
+// 📁 app/layout.tsx
 import './globals.css';
 
 // Default revalidation for all routes — cache indefinitely at Vercel edge.
-// This is a job site; most pages are static or near-static.
-// Pages that need periodic refresh override this with their own:
-//   export const revalidate = 1800  ← job listing (/jobs)
-//   export const revalidate = 3600  ← location/state pages
-// Everything else (job detail, country pages, tools, blog) stays cached until redeployment.
 export const revalidate = false;
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import RootLayoutClient from './RootLayoutClient';
 import PWAInstaller from '@/components/PWAInstaller';
 import NotificationManager from '@/components/NotificationManager';
+import TimedJobPopup from '@/components/TimedJobPopup';
+import { CreditProvider } from '@/context/CreditContext'; // Added import
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -137,11 +135,15 @@ export default function RootLayout({
             gtag('config', 'G-315B0S5RGE');
           `
         }} />
+
       </head>
       <body className={inter.className}>
-        <RootLayoutClient>{children}</RootLayoutClient>
+        <CreditProvider>
+          <RootLayoutClient>{children}</RootLayoutClient>
+        </CreditProvider>
         <PWAInstaller />
         <NotificationManager />
+        <TimedJobPopup />
       </body>
     </html>
   );

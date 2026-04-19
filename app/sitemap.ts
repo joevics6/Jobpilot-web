@@ -83,7 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const jobSitemaps: MetadataRoute.Sitemap = Array.from(
       { length: numberOfSitemaps },
       (_, i) => ({
-        url: `${siteUrl}/sitemap-jobs/${i + 1}`,
+        url: `${siteUrl}/sitemap-jobs/${i + 1}.xml`,
         lastModified: new Date(),
         changeFrequency: 'hourly',
         priority: 1,
