@@ -20,14 +20,11 @@ import {
   Sparkles, 
   Bookmark, 
   BookmarkCheck, 
-  Search,
   Share2,
-  MessageCircle,
-  Send,
   ChevronRight,
   BookOpen,
   PenTool,
-  X, // Added for close button
+  X,
 } from 'lucide-react';
 import { theme } from '@/lib/theme';
 import UpgradeModal from '@/components/jobs/UpgradeModal';
@@ -36,23 +33,14 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import AdUnit from '@/components/ads/AdUnit';
 
 // ─── Ad slot IDs ───────────────────────────────────────────────────────────────
-// Each slot used EXACTLY ONCE across the entire page — no duplicates.
 const AD_SLOTS = {
-  // Ad 1 — After job overview row (display top, auto, full-width-responsive)
   DISPLAY_TOP:        '4198231153',
-  // Ad 2 — After Skills / before Responsibilities (in-article fluid)
   IN_ARTICLE_1:       '4690286797',
-  // Ad 3 — After Qualifications / before Benefits (in-article fluid)
   IN_ARTICLE_2:       '8181708196',
-  // Ad 4 — Before How to Apply (display bottom, auto, full-width-responsive)
   DISPLAY_BOTTOM:     '9751041788',
-  // Ad 5 — Sidebar mobile in-flow (in-feed fluid)
   SIDEBAR_MOBILE:     '9025117620',
-  // Ad 6 — Mobile anchor bar (middle display, auto)
   ANCHOR_MOBILE:      '9010641928',
-  // Ad 7 — Sidebar top desktop + mobile after Career Articles (display, auto)
   JOBCLIENT_DISPLAY:  '1809021288',
-  // Ad 8 — Sidebar bottom desktop (display, auto)
   MULTIPLEX:          '8344942808',
 } as const;
 
@@ -61,7 +49,7 @@ const STORAGE_KEYS = {
   APPLIED_JOBS: 'applied_jobs',
 };
 
-// ─── Featured Quizzes — hardcoded, zero DB calls ──────────────────────────────
+// ─── Featured Quizzes ────────────────────────────────────────────────────────
 const FEATURED_QUIZZES = [
   { name: 'KPMG Recruitment Test Practice', url: '/tools/quiz/kpmg-assessment-practice-test' },
   { name: 'PwC Recruitment Test Practice', url: '/tools/quiz/pwc-recruitment-assessment-practice-test' },
@@ -70,8 +58,7 @@ const FEATURED_QUIZZES = [
   { name: 'Access Bank Graduate Trainee Aptitude Test', url: '/tools/quiz/access-bank-graduate-trainee-assessment-test' },
 ];
 
-// ─── Blog Articles — hardcoded pool, shown randomly ──────────────────────────
-// region: 'nigeria' = shown for NG jobs | 'global' = shown for all jobs
+// ─── Blog Articles ───────────────────────────────────────────────────────────
 const ALL_BLOGS = [
   { title: 'Should You Include Your Photo on Nigerian CVs?', url: '/blog/nigerian-cv-photo-pros-cons-recruiter-tips', region: 'nigeria' },
   { title: 'What to Wear to Interviews in Lagos vs Abuja', url: '/blog/lagos-vs-abuja-interview-attir-guide', region: 'nigeria' },
@@ -96,7 +83,7 @@ const ALL_BLOGS = [
   { title: 'How to Identify Fake Job Offers & Scam Interviews', url: '/blog/spot-fake-jobs--scam-interviews-nigeria', region: 'global' },
 ];
 
-// ─── Helper: get random N items from array ────────────────────────────────────
+// ─── Helper ───────────────────────────────────────────────────────────────────
 function getRandomItems<T>(arr: T[], n: number): T[] {
   return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 }
@@ -124,11 +111,9 @@ export default function JobClient({ job, relatedJobs, companies }: {
   const [showUrl, setShowUrl] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Mobile anchor ad state — starts at 100px, shrinks to 50px on close
   const [anchorHeight, setAnchorHeight] = useState(100);
   const [isAnchorClosed, setIsAnchorClosed] = useState(false);
 
-  // ─── Blog randomization — client-only to avoid SSR/hydration mismatch ─────
   const [randomBlogs, setRandomBlogs] = useState<typeof ALL_BLOGS>([]);
 
   useEffect(() => {
@@ -141,7 +126,7 @@ export default function JobClient({ job, relatedJobs, companies }: {
       b.region === 'global' || (isNigerianJob && b.region === 'nigeria')
     );
     setRandomBlogs(getRandomItems(pool, 5));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCopy = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
@@ -157,13 +142,12 @@ export default function JobClient({ job, relatedJobs, companies }: {
 
   const handleShare = async () => {
     const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/jobs/${job.slug || job.id}`;
-    const shareText = `Check out this job: ${job.title} at ${getCompanyName()}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
           title: `${job.title} at ${getCompanyName()}`,
-          text: shareText,
+          text: `Check out this job: ${job.title} at ${getCompanyName()}`,
           url: shareUrl,
         });
       } catch (error: any) {
@@ -182,9 +166,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
     checkAuth();
     loadSavedStatus();
     loadAppliedStatus();
-    
-    // Removed loadCompanies() and loadCompanyJobs() 
-    // Companies now passed from server via Cloudflare
 
     if (!relatedJobs || relatedJobs.length === 0) {
       loadSimilarJobs();
@@ -362,7 +343,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
           className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm transition-transform duration-300"
           style={{ transform: headerVisible ? 'translateY(0)' : 'translateY(-100%)' }}
         >
-          {/* Row 1 — Breadcrumb */}
           <div className="border-b border-gray-100">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
               <nav className="flex items-center gap-1.5 text-xs text-gray-500 flex-wrap" aria-label="Breadcrumb">
@@ -389,7 +369,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
             </div>
           </div>
 
-          {/* Row 2 — Actions */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
             <div className="flex items-center justify-between gap-3">
               <button
@@ -750,7 +729,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 return null;
               })()}
 
-              {/* In-article ad 2 — between Qualifications and Benefits */}
               <div className="w-full overflow-hidden">
                 <AdUnit
                   key={AD_SLOTS.IN_ARTICLE_2}
@@ -782,7 +760,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 return null;
               })()}
 
-              {/* Display bottom — before How to Apply */}
               <div className="w-full overflow-hidden" style={{ minHeight: '100px' }}>
                 <AdUnit
                   key={AD_SLOTS.DISPLAY_BOTTOM}
@@ -1217,7 +1194,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 </div>
               )}
 
-              {/* Display ad — after Career Articles on both mobile and desktop */}
               <div className="w-full rounded-lg overflow-hidden" style={{ minHeight: '250px' }}>
                 <AdUnit
                   key={AD_SLOTS.JOBCLIENT_DISPLAY}
@@ -1227,7 +1203,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
                 />
               </div>
 
-              {/* Sidebar bottom — multiplex unit, desktop only, below Career Articles */}
               <div className="hidden lg:block w-full rounded-lg overflow-hidden" style={{ minHeight: '250px' }}>
                 <AdUnit
                   key={`${AD_SLOTS.MULTIPLEX}-sidebar`}
@@ -1241,7 +1216,7 @@ export default function JobClient({ job, relatedJobs, companies }: {
           </div>
         </div>
 
-        {/* Mobile Anchor Ad with Close Button */}
+        {/* Mobile Anchor Ad */}
         <div
           id="mobile-anchor-ad"
           className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300"
@@ -1259,7 +1234,6 @@ export default function JobClient({ job, relatedJobs, companies }: {
               key={AD_SLOTS.ANCHOR_MOBILE}
               slot={AD_SLOTS.ANCHOR_MOBILE}
               format="auto"
-              fullWidthResponsive={true}  {/* This one was missed earlier — removed now */}
               style={{ display: 'block', width: '100%', height: `${anchorHeight}px`, maxHeight: `${anchorHeight}px` }}
             />
           </div>
