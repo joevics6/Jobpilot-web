@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { mapJobToSchema } from '@/lib/mapJobToSchema';
 import JobClient from './JobClient';
-import TimedJobPopup from '@/components/TimedJobPopup';
 import { Metadata } from 'next';
 import { cache } from 'react';
 
@@ -40,9 +39,6 @@ const getRelatedJobs = cache(async (currentJob: any) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  let relatedJobs: any[] = [];
-  const MAX_JOBS = 10;
-
   const { data } = await supabase
     .from('jobs')
     .select('id, title, company, location, category, slug, status, deadline, created_at')
@@ -50,23 +46,9 @@ const getRelatedJobs = cache(async (currentJob: any) => {
     .neq('id', currentJob.id)
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: false })
-    .limit(MAX_JOBS);
+    .limit(10);
 
-  if (data) relatedJobs = data;
-
-  if (relatedJobs.length < MAX_JOBS) {
-    const { data: moreJobs } = await supabase
-      .from('jobs')
-      .select('id, title, company, location, category, slug, status, deadline, created_at')
-      .neq('id', currentJob.id)
-      .not('id', 'in', `(${relatedJobs.map(j => j.id).join(',') || '0'})`)
-      .order('created_at', { ascending: false })
-      .limit(MAX_JOBS - relatedJobs.length);
-    
-    if (moreJobs) relatedJobs = [...relatedJobs, ...moreJobs];
-  }
-
-  return relatedJobs;
+  return data || [];
 });
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
@@ -106,15 +88,6 @@ export default async function JobPage({ params }: { params: { slug: string } }) 
   const job = await getJob(params.slug);
   if (!job) notFound();
 
-  // ── FIXED LINE 185 (Safety check for Array vs String) ───────────────────
-  const countryValue = Array.isArray(job.country) ? job.country[0] : job.country;
-
-  const isNigerianJob = 
-    job.location?.country?.toLowerCase() === 'nigeria' || 
-    (typeof countryValue === 'string' && countryValue.toLowerCase() === 'nigeria') ||
-    (typeof job.location === 'string' && job.location.toLowerCase().includes('nigeria'));
-  // ───────────────────────────────────────────────────────────────────────
-
   const companies = await getCompanies();
   const relatedJobs = await getRelatedJobs(job);
   const schema = mapJobToSchema(job);
@@ -125,14 +98,11 @@ export default async function JobPage({ params }: { params: { slug: string } }) 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
-      
       <JobClient 
         job={job} 
         relatedJobs={relatedJobs} 
         companies={companies} 
       />
-
-      <TimedJobPopup />
     </>
   );
 }

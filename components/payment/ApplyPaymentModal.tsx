@@ -72,6 +72,7 @@ interface ApplyPaymentModalProps {
   onOpenChange: (open: boolean) => void;
   defaultPackage?: string;
   onAuthRequired: () => void;
+  onSuccess?: () => void;
 }
 
 export function ApplyPaymentModal({
@@ -79,6 +80,7 @@ export function ApplyPaymentModal({
   onOpenChange,
   defaultPackage = 'pro',
   onAuthRequired,
+  onSuccess,
 }: ApplyPaymentModalProps) {
   const [selectedPackage, setSelectedPackage] = useState(defaultPackage);
   const [userEmail, setUserEmail] = useState<string | null>(null);
