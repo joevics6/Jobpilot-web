@@ -1,9 +1,10 @@
 import JobList from '@/components/jobs/JobList';
-import TimedJobPopup from '@/components/TimedJobPopup';
 import { Metadata } from 'next';
 
-// Keep force-dynamic if you want fresh data on every visit
-export const dynamic = 'force-dynamic';
+// Cache this page for 30 minutes — matches the Cloudflare worker's cache TTL.
+// Cloudflare (CFA) then caches the rendered HTML on top of this indefinitely.
+// No force-dynamic — that was causing a full Vercel SSR invocation on every visit.
+export const revalidate = 1800;
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jobmeter.app';
 const CLOUDFLARE_WORKER_URL = 'https://jobs-api.joevicspro.workers.dev';
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
 async function getJobs(): Promise<any[]> {
   try {
     const res = await fetch(CLOUDFLARE_WORKER_URL, {
-      cache: 'no-store',
+      next: { revalidate: 1800 }, // Next.js data cache — matches page revalidate TTL
     });
 
     if (!res.ok) return [];
@@ -49,23 +50,8 @@ async function getJobs(): Promise<any[]> {
   }
 }
 
-export default async function JobsPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
+export default async function JobsPage() {
   const jobs = await getJobs();
-
-  // ── Check if Nigeria filter is applied ─────────────────────────────
-  const locationParam = typeof searchParams.location === 'string' 
-    ? searchParams.location.toLowerCase() 
-    : '';
-  
-  const countryParam = typeof searchParams.country === 'string' 
-    ? searchParams.country.toLowerCase() 
-    : '';
-
-  const isNigeriaFilter = locationParam === 'nigeria' || countryParam === 'nigeria';
 
   // ── JSON-LD: ItemList of top 20 jobs for Google ─────────────────────
   const itemListSchema = {
@@ -107,9 +93,6 @@ export default async function JobsPage({
         {/* Pass the pre-fetched jobs from Cloudflare into the client component */}
         <JobList initialJobs={jobs} />
       </main>
-
-      {/* Timed Job Popup - Force show when Nigeria filter is active */}
-      <TimedJobPopup forceShow={isNigeriaFilter} />
     </>
   );
 }

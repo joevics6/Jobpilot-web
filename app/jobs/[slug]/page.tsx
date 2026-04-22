@@ -1,24 +1,34 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
 import { mapJobToSchema } from '@/lib/mapJobToSchema';
 import JobClient from './JobClient';
 import { Metadata } from 'next';
 import { cache } from 'react';
 
+// force-static + revalidate=false means: render once per slug on first request,
+// cache forever on Vercel. Cloudflare then caches the HTML on top indefinitely.
+// Only re-renders if you manually call revalidatePath('/jobs/[slug]') when a job changes.
 export const revalidate = false;
 export const dynamic = 'force-static';
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const COMPANIES_URL = 'https://jobs-api.joevicspro.workers.dev/companies';
 
+// Plain REST fetch — no cookies, no request state, fully static-compatible
 const getJob = cache(async (slug: string) => {
-  const supabase = createClient();
-  const { data: job, error } = await supabase
-    .from('jobs')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-  if (error || !job) return null;
-  return job;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/jobs?slug=eq.${slug}&select=*&limit=1`,
+    {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      next: { revalidate: false },
+    }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data[0] || null;
 });
 
 const getCompanies = cache(async () => {
@@ -34,21 +44,33 @@ const getCompanies = cache(async () => {
   }
 });
 
+// Plain REST fetch for related jobs — no createClient(), no cookies
 const getRelatedJobs = cache(async (currentJob: any) => {
-  const supabase = createClient();
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const dateStr = thirtyDaysAgo.toISOString();
 
-  const { data } = await supabase
-    .from('jobs')
-    .select('id, title, company, location, category, slug, status, deadline, created_at')
-    .eq('category', currentJob.category)
-    .neq('id', currentJob.id)
-    .gte('created_at', thirtyDaysAgo.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(10);
+  const params = new URLSearchParams({
+    select: 'id,title,company,location,category,slug,status,deadline,created_at',
+    category: `eq.${currentJob.category}`,
+    id: `neq.${currentJob.id}`,
+    created_at: `gte.${dateStr}`,
+    order: 'created_at.desc',
+    limit: '10',
+  });
 
-  return data || [];
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/jobs?${params.toString()}`,
+    {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      next: { revalidate: false },
+    }
+  );
+  if (!res.ok) return [];
+  return await res.json();
 });
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {

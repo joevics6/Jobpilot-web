@@ -357,7 +357,7 @@ export default function JobCard({
             </button>
 
             {/* Apply Button */}
-            <Link href={`/jobs/${job.slug}`} className="block">
+            <Link href={`/jobs/${job.slug}`} prefetch={false} className="block">
               <button
                 className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all hover:scale-105 ${
                   isApplied 

@@ -8,7 +8,6 @@ import { Inter } from 'next/font/google';
 import RootLayoutClient from './RootLayoutClient';
 import PWAInstaller from '@/components/PWAInstaller';
 import NotificationManager from '@/components/NotificationManager';
-import TimedJobPopup from '@/components/TimedJobPopup';
 import { CreditProvider } from '@/context/CreditContext'; // Added import
 
 const inter = Inter({ subsets: ['latin'] });
@@ -143,7 +142,6 @@ export default function RootLayout({
         </CreditProvider>
         <PWAInstaller />
         <NotificationManager />
-        <TimedJobPopup />
       </body>
     </html>
   );
